@@ -16,9 +16,9 @@ public class FunctionTimerAspectTest {
         final MetricRegistry registry = SharedMetricRegistries.getOrCreate("test-metrics");
         FunctionMetricsManager.initialize("phonepe.test", registry);
         final MyClass myClass = new MyClass();
-        myClass.myFunction(1);
+        myClass.pubFunction(1);
         myClass.nonTimedFunction();
-        myClass.myFunction(3);
+        myClass.pubFunction(3);
 
         final FunctionInvocation myFunctionInvocation
                 = new FunctionInvocation("MyClass", "myFunction");
@@ -36,7 +36,7 @@ public class FunctionTimerAspectTest {
                             FunctionMetricsManager.timer(TimerDomain.ALL, nonTimedFunctionInvocation).orElse(null).getCount());
 
         try {
-            myClass.myFunction(2);
+            myClass.pubFunction(2);
         } catch (Exception e) {
             Assert.assertEquals(1, failureTimer.getCount());
             Assert.assertEquals(2, successTimer.getCount());
