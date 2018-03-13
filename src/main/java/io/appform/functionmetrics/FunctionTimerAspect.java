@@ -10,6 +10,7 @@ import org.aspectj.lang.annotation.Pointcut;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -41,21 +42,24 @@ public class FunctionTimerAspect {
         try {
             Object response = joinPoint.proceed();
             stopwatch.stop();
-            updateTimer(FunctionalMetricsManager.timer(TimerDomain.SUCCESS, invocation), stopwatch);
+            updateTimer(FunctionMetricsManager.timer(TimerDomain.SUCCESS, invocation), stopwatch);
             return response;
         }
         catch(Throwable t) {
             stopwatch.stop();
-            updateTimer(FunctionalMetricsManager.timer(TimerDomain.FAILURE, invocation), stopwatch);
+            updateTimer(FunctionMetricsManager.timer(TimerDomain.FAILURE, invocation), stopwatch);
             throw t;
         }
         finally {
-            updateTimer(FunctionalMetricsManager.timer(TimerDomain.ALL, invocation), stopwatch);
+            updateTimer(FunctionMetricsManager.timer(TimerDomain.ALL, invocation), stopwatch);
         }
     }
 
-    private void updateTimer(Timer timer, Stopwatch stopwatch) {
-        timer.update(stopwatch.elapsed(TimeUnit.MILLISECONDS), TimeUnit.MILLISECONDS);
+    private void updateTimer(Optional<Timer> timer, Stopwatch stopwatch) {
+        if(!timer.isPresent()) {
+            return;
+        }
+        timer.get().update(stopwatch.elapsed(TimeUnit.MILLISECONDS), TimeUnit.MILLISECONDS);
     }
 
 }
