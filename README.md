@@ -3,12 +3,12 @@ This simple library provides a way to annotate your functions and get success, f
 
 # Requirements
 
-* JDK - Oracle/Sun JDK 1.8+
-* Dropwizard Metrics (Formerly called Yammer Metrics) - 3.2.2+
-* Guava - 21.0+
+* _JDK -_ Oracle/Sun JDK 1.8+
+* _Dropwizard Metrics (Formerly called Yammer Metrics) -_ 3.2.2+
+* _Guava -_ 21.0+
 
 ## Usage
-To use this library two things need to be added to your Maven pom file.
+To use this library the following need to be added to your Maven pom file.
 
 ### Dependency
 Put this into the `dependencies` section of your pom file:
@@ -92,14 +92,15 @@ Therefore, configuration needs to be put into your pom file in the `build/plugin
                 </plugin>
 ```
 
-_NOTE: This config uses in-place weaving of the compiled classes. Weaving can also be done during compilation, however this does not work with libraries like Lombok._
+_NOTE: This config uses in-place weaving of the compiled classes.
+Weaving can also be done during compilation, however in this mode libraries like Lombok etc will stop working._
  
 ### Code
 
 #### Initializing the metrics collection system
 The following information must be provided for the system to initialize.
-* _Prefix of the metrics:_ This will be prepended to the metrics being generated.
-* _Registry:_ The metrics registry to which the metrics will be pushed.
+* _**Prefix of the metrics:**_ This will be prepended to the metrics being generated.
+* _**Registry:**_ The metrics registry to which the metrics will be pushed.
 
 ```
         FunctionMetricsManager.initialize(<prefix>, <metricsRegistry>);
@@ -126,8 +127,8 @@ For example:
 ## What metrics will get pushed
 
 Let's assume the following:
-* Metric prefix: test
-* Function being tested: MyClass.myFunction()
+* **Metric prefix:** _test_
+* **Function being tested:** _MyClass.myFunction()_
 
 ### Metrics published
 
@@ -149,7 +150,7 @@ Let's assume the following:
     * 99.9%
 #### Failure rates and timings of failed calls
 
-_NOTE: We consider it to be a failure if the method throws an exception_
+_**NOTE:** We consider it to be a failure if the method throws an exception_
 
 * \<prefix>.\<className>.\<methodName>.failure
     * mean rate
@@ -186,7 +187,6 @@ _NOTE: We consider it to be a failure if the method throws an exception_
 
 ### Sample Metrics
 
-_NOTE: This is output from Dropwizard metrics console reporter.
 ```text
 test.MyClass.myFunction.all
              count = 3
@@ -237,6 +237,7 @@ test.MyClass.myFunction.success
               99% <= 0.00 milliseconds
             99.9% <= 0.00 milliseconds
 ```
+_**NOTE:** This is output from Dropwizard metrics console reporter._
 
 ## License
 Apache 2
