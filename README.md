@@ -22,7 +22,7 @@ Put this into the `dependencies` section of your pom file:
     <dependency>
         <groupId>io.appform.functionmetrics</groupId>
         <artifactId>function-metrics</artifactId>
-        <version>1.0</version>
+        <version>1.0.1</version>
     </dependency>
 ```
 
@@ -61,7 +61,7 @@ Therefore, configuration needs to be put into your pom file in the `build/plugin
                             <version>1.8.13</version>
                         </dependency>
                     </dependencies>
-    
+
                     <configuration>
                         <complianceLevel>1.8</complianceLevel>
                         <source>1.8</source>
@@ -94,7 +94,7 @@ Therefore, configuration needs to be put into your pom file in the `build/plugin
 
 _NOTE: This config uses in-place weaving of the compiled classes.
 Weaving can also be done during compilation, however in this mode libraries like Lombok etc will stop working._
- 
+
 ### Code
 
 #### Initializing the metrics collection system
@@ -123,6 +123,17 @@ For example:
         //Demo function
     }
 ```
+
+##### Overriding default class and method names
+You can override the name of the class/method that will be populated in the metric.
+```
+    @MonitoredFunction(className="Blah", method="randomFunction")
+    private void myFunction(int val) {
+        //Demo function
+    }
+```
+_**NOTE:** This is handy in case you want to differentiate between overloaded methods. _
+
 
 ## What metrics will get pushed
 
@@ -167,8 +178,8 @@ _**NOTE:** We consider it to be a failure if the method throws an exception_
     * 98%
     * 99%
     * 99.9%
-    
-#### Successful call rates and timings 
+
+#### Successful call rates and timings
 * \<prefix>.\<className>.\<methodName>.success
     *  mean rate
     *  1-minute rate
@@ -243,4 +254,4 @@ _**NOTE:** This is output from Dropwizard metrics console reporter._
 Apache 2
 
 ## Version
-1.0
+1.0.1

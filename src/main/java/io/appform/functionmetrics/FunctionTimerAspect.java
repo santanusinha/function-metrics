@@ -2,11 +2,13 @@ package io.appform.functionmetrics;
 
 import com.codahale.metrics.Timer;
 import com.google.common.base.Stopwatch;
+import com.google.common.base.Strings;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.Signature;
 import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
 import org.aspectj.lang.annotation.Pointcut;
+import org.aspectj.lang.reflect.MethodSignature;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -33,8 +35,14 @@ public class FunctionTimerAspect {
     @Around("monitoredFunctionCalled() && anyFunctionCalled()")
     public Object around(ProceedingJoinPoint joinPoint) throws Throwable {
         final Signature callSignature = joinPoint.getSignature();
-        final String className = callSignature.getDeclaringType().getSimpleName();
-        final String methodName = callSignature.getName();
+        final MethodSignature methodSignature = MethodSignature.class.cast(callSignature);
+        MonitoredFunction monitoredFunction = methodSignature.getMethod().getAnnotation(MonitoredFunction.class);
+        final String className = Strings.isNullOrEmpty(monitoredFunction.className())
+                                    ? callSignature.getDeclaringType().getSimpleName()
+                                    : monitoredFunction.className();
+        final String methodName = Strings.isNullOrEmpty(monitoredFunction.method())
+                                    ? callSignature.getName()
+                                    : monitoredFunction.method();
         log.trace("Called for class: {} method: {}", className, methodName);
         final FunctionInvocation invocation = new FunctionInvocation(className, methodName);
         Stopwatch stopwatch = Stopwatch.createStarted();

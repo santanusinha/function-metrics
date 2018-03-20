@@ -4,6 +4,7 @@ import com.codahale.metrics.MetricRegistry;
 import com.codahale.metrics.SharedMetricRegistries;
 import com.codahale.metrics.Timer;
 import org.junit.Assert;
+import org.junit.BeforeClass;
 import org.junit.Test;
 
 /**
@@ -11,10 +12,15 @@ import org.junit.Test;
  */
 public class FunctionTimerAspectTest {
 
+    private final static MetricRegistry registry = SharedMetricRegistries.getOrCreate("test-metrics");
+
+    @BeforeClass
+    public static void setup() {
+        FunctionMetricsManager.initialize("phonepe.test", registry);
+    }
+
     @Test
     public void testMetricsCollection() throws Exception {
-        final MetricRegistry registry = SharedMetricRegistries.getOrCreate("test-metrics");
-        FunctionMetricsManager.initialize("phonepe.test", registry);
         final MyClass myClass = new MyClass();
         myClass.pubFunction(1);
         myClass.nonTimedFunction();
@@ -44,4 +50,20 @@ public class FunctionTimerAspectTest {
         }
     }
 
+    @Test
+    public void testMetricsCollectionCustomName() throws Exception {
+        final MyClass myClass = new MyClass();
+        myClass.myFunction(2,3);
+
+        final FunctionInvocation invocation
+                = new FunctionInvocation("MyClass", "myOverloadedFunction");
+        final Timer failureTimer
+                = FunctionMetricsManager.timer(TimerDomain.FAILURE, invocation).orElse(null);
+        Assert.assertNotNull(failureTimer);
+        Assert.assertEquals(0, failureTimer.getCount());
+        final Timer successTimer
+                = FunctionMetricsManager.timer(TimerDomain.SUCCESS, invocation).orElse(null);
+        Assert.assertNotNull(successTimer);
+        Assert.assertEquals(1, successTimer.getCount());
+    }
 }
