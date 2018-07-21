@@ -1,6 +1,7 @@
 package io.appform.functionmetrics;
 
 import com.codahale.metrics.Timer;
+import com.google.common.base.Joiner;
 import com.google.common.base.Stopwatch;
 import com.google.common.base.Strings;
 import org.aspectj.lang.ProceedingJoinPoint;
@@ -12,7 +13,13 @@ import org.aspectj.lang.reflect.MethodSignature;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.lang.reflect.Parameter;
+import java.util.Arrays;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
+import java.util.stream.Stream;
 
 /**
  * This aspect ensures that only methods annotated with {@link MonitoredFunction} are measured.
@@ -43,8 +50,34 @@ public class FunctionTimerAspect {
         final String methodName = Strings.isNullOrEmpty(monitoredFunction.method())
                                     ? callSignature.getName()
                                     : monitoredFunction.method();
-        log.trace("Called for class: {} method: {}", className, methodName);
-        final FunctionInvocation invocation = new FunctionInvocation(className, methodName);
+        final String[] parameterNames = methodSignature.getParameterNames();
+        final Parameter[] parameters = methodSignature.getMethod().getParameters();
+        String parameterString = "";
+        if (parameterNames != null && parameterNames.length > 0) {
+            List<String> dynamicPrefixComponents = IntStream.range(0, parameterNames.length)
+                    .mapToObj(i -> {
+                        String parameterName = parameterNames[i];
+                        Object[] args = joinPoint.getArgs();
+                        if (args != null && i < args.length) {
+                            Object arg = args[i];
+                            if (arg instanceof String) {
+                                return String.class.cast(arg);
+                            } else {
+                                return "";
+                            }
+                        }
+                        return "";
+                    })
+                    .collect(Collectors.toList());
+            if (dynamicPrefixComponents
+                    .stream()
+                    .noneMatch(Strings::isNullOrEmpty)) {
+                parameterString = Joiner.on(".").join(dynamicPrefixComponents);
+            }
+        }
+
+        log.trace("Called for class: {} method: {} parameterString: {}", className, methodName, parameterString);
+        final FunctionInvocation invocation = new FunctionInvocation(className, methodName, parameterString);
         Stopwatch stopwatch = Stopwatch.createStarted();
         try {
             Object response = joinPoint.proceed();

@@ -30,10 +30,11 @@ public class FunctionMetricsManager {
             return Optional.empty();
         }
         return Optional.of(registry.timer(
-                String.format("%s.%s.%s.%s",
+                String.format("%s.%s.%s.%s.%s",
                               prefix,
                               invocation.getClassName(),
                               invocation.getMethodName(),
+                              invocation.getParameterString(),
                               domain.getValue())));
     }
 }
