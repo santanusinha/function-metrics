@@ -20,18 +20,18 @@ public class MyClass {
         System.out.println("Val: " + Objects.toString(x + y));
     }
 
-    @MonitoredFunction(args = {"x", "y"})
-    public void parameterValidFunction(String x, String y) {
+    @MonitoredFunction()
+    public void parameterValidFunction(@MetricTerm String x, @MetricTerm String y) {
         System.out.println(String.format("x = %s, y = %s", x, y));
     }
 
-    @MonitoredFunction(args = {"x", "y"})
-    public void parameterInvalidFunction(String x, int y) {
+    @MonitoredFunction()
+    public void parameterInvalidFunction(@MetricTerm String x, @MetricTerm int y) {
         System.out.println(String.format("x = %s, y = %d", x, y));
     }
 
-    @MonitoredFunction(method = "parameterInvalidVarArgsFunction", args = {"x", "y"})
-    public void parameterInvalidFunction(String x, String... y) {
+    @MonitoredFunction(method = "parameterInvalidVarArgsFunction")
+    public void parameterInvalidFunction(@MetricTerm String x, @MetricTerm String... y) {
         System.out.println(String.format("x = %s, y = [%s]", x, Joiner.on(",").join(y)));
     }
 

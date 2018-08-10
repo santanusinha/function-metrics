@@ -4,6 +4,8 @@ import com.codahale.metrics.Timer;
 import com.google.common.base.Joiner;
 import com.google.common.base.Stopwatch;
 import com.google.common.base.Strings;
+import com.google.common.collect.Streams;
+import javafx.util.Pair;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.Signature;
 import org.aspectj.lang.annotation.Around;
@@ -13,13 +15,12 @@ import org.aspectj.lang.reflect.MethodSignature;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.lang.reflect.Parameter;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
-import java.util.stream.IntStream;
-import java.util.stream.Stream;
+
+import static io.appform.functionmetrics.FunctionMetricConstants.*;
 
 /**
  * This aspect ensures that only methods annotated with {@link MonitoredFunction} are measured.
@@ -51,29 +52,25 @@ public class FunctionTimerAspect {
                                     ? callSignature.getName()
                                     : monitoredFunction.method();
         final String[] parameterNames = methodSignature.getParameterNames();
-        final Parameter[] parameters = methodSignature.getMethod().getParameters();
         String parameterString = "";
-        if (parameterNames != null && parameterNames.length > 0) {
-            List<String> dynamicPrefixComponents = IntStream.range(0, parameterNames.length)
-                    .mapToObj(i -> {
-                        String parameterName = parameterNames[i];
-                        Object[] args = joinPoint.getArgs();
-                        if (args != null && i < args.length) {
-                            Object arg = args[i];
-                            if (arg instanceof String) {
-                                return String.class.cast(arg);
-                            } else {
-                                return "";
-                            }
-                        }
-                        return "";
-                    })
-                    .collect(Collectors.toList());
-            if (dynamicPrefixComponents
-                    .stream()
-                    .noneMatch(Strings::isNullOrEmpty)) {
-                parameterString = Joiner.on(".").join(dynamicPrefixComponents);
-            }
+        List<String> paramValues = Streams.zip(Arrays.stream(methodSignature.getMethod().getParameters()), Arrays.stream(joinPoint.getArgs()), Pair::new)
+                .filter(pair -> {
+                    MetricTerm metricTerm = pair.getKey().getAnnotation(MetricTerm.class);
+                    return metricTerm != null;
+                })
+                .map(Pair::getValue)
+                .map(paramValue -> paramValue != null ? paramValue : "")
+                .map(paramValue -> paramValue instanceof String ? (String) paramValue : "")
+                .map(String::trim)
+                .map(paramValue -> NON_ENGLISH_ALPHABET_PATTERN.matcher(paramValue).replaceAll(""))
+                .map(String::toLowerCase)
+                .collect(Collectors.toList());
+
+        // if and only if after all transformations none of the parameter values are null or empty will we add the parameter string to the metric name
+        if (paramValues
+                .stream()
+                .noneMatch(Strings::isNullOrEmpty)) {
+            parameterString = Joiner.on(METRIC_DELIMITER).join(paramValues);
         }
 
         log.trace("Called for class: {} method: {} parameterString: {}", className, methodName, parameterString);

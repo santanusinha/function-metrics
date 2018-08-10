@@ -2,6 +2,7 @@ package io.appform.functionmetrics;
 
 import com.codahale.metrics.MetricRegistry;
 import com.codahale.metrics.Timer;
+import com.google.common.base.Strings;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -29,12 +30,22 @@ public class FunctionMetricsManager {
             log.warn("Please call FunctionalMetricsManager.initialize() to setup metrics collection. No metrics will be pushed.");
             return Optional.empty();
         }
-        return Optional.of(registry.timer(
-                String.format("%s.%s.%s.%s.%s",
-                              prefix,
-                              invocation.getClassName(),
-                              invocation.getMethodName(),
-                              invocation.getParameterString(),
-                              domain.getValue())));
+        if (!Strings.isNullOrEmpty(invocation.getParameterString())) {
+            return Optional.of(registry.timer(
+                    String.format("%s.%s.%s.%s.%s",
+                            prefix,
+                            invocation.getClassName(),
+                            invocation.getMethodName(),
+                            invocation.getParameterString(),
+                            domain.getValue())));
+        } else {
+            return Optional.of(registry.timer(
+                    String.format("%s.%s.%s.%s",
+                            prefix,
+                            invocation.getClassName(),
+                            invocation.getMethodName(),
+                            domain.getValue())));
+        }
+
     }
 }
