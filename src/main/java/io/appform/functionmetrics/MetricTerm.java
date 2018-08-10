@@ -34,4 +34,8 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.PARAMETER)
 public @interface MetricTerm {
+    // set order to control the order in which parameter string values are concatenated to form the metric name
+    // the parameter values are sorted in ascending order of this param to derive the metric name
+    // setting explicit order helps to maintain consistent metric names across formal parameter sequence changes in method signature
+    int order() default 0;
 }

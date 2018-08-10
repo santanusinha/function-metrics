@@ -16,6 +16,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.Arrays;
+import java.util.Comparator;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
@@ -58,6 +59,11 @@ public class FunctionTimerAspect {
                     MetricTerm metricTerm = pair.getKey().getAnnotation(MetricTerm.class);
                     return metricTerm != null;
                 })
+                .map(pair -> {
+                    MetricTerm metricTerm = pair.getKey().getAnnotation(MetricTerm.class);
+                    return new Pair<>(metricTerm.order(), pair.getValue());
+                })
+                .sorted(Comparator.comparingInt(Pair::getKey))
                 .map(Pair::getValue)
                 .map(paramValue -> paramValue != null ? paramValue : "")
                 .map(paramValue -> paramValue instanceof String ? (String) paramValue : "")
