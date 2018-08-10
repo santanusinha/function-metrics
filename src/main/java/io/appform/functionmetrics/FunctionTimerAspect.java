@@ -62,7 +62,7 @@ public class FunctionTimerAspect {
                 .map(paramValue -> paramValue != null ? paramValue : "")
                 .map(paramValue -> paramValue instanceof String ? (String) paramValue : "")
                 .map(String::trim)
-                .map(paramValue -> NON_ENGLISH_ALPHABET_PATTERN.matcher(paramValue).replaceAll(""))
+                .map(paramValue -> ALLOWED_PARAM_VALUE_CHARS.matcher(paramValue).replaceAll(""))
                 .map(String::toLowerCase)
                 .collect(Collectors.toList());
 
