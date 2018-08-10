@@ -4,5 +4,5 @@ import java.util.regex.Pattern;
 
 public interface FunctionMetricConstants {
     String METRIC_DELIMITER = ".";
-    Pattern ALLOWED_PARAM_VALUE_CHARS = Pattern.compile("[^_a-zA-Z]");
+    Pattern NON_ALPHABET_CHARS_PATTERN = Pattern.compile("[^a-zA-Z]");
 }
