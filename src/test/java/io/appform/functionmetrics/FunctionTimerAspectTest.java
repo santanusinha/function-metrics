@@ -16,7 +16,7 @@ public class FunctionTimerAspectTest {
 
     @BeforeClass
     public static void setup() {
-        FunctionMetricsManager.initialize("phonepe.test", registry);
+        FunctionMetricsManager.initialize("phonepe.test", registry, true);
     }
 
     @Test

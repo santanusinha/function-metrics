@@ -16,13 +16,15 @@ public class FunctionMetricsManager {
 
     private static MetricRegistry registry;
     private static String prefix;
+    private static boolean enableParameterCapture;
 
     private FunctionMetricsManager() {}
 
-    public static void initialize(String packageName, MetricRegistry registry) {
+    public static void initialize(String packageName, MetricRegistry registry, boolean enableParameterCapture) {
         log.info("Functional Metric prefix: {}", packageName);
         FunctionMetricsManager.registry = registry;
         FunctionMetricsManager.prefix = packageName;
+        FunctionMetricsManager.enableParameterCapture = enableParameterCapture;
     }
 
     public static Optional<Timer> timer(final TimerDomain domain, final FunctionInvocation invocation) {
@@ -30,7 +32,7 @@ public class FunctionMetricsManager {
             log.warn("Please call FunctionalMetricsManager.initialize() to setup metrics collection. No metrics will be pushed.");
             return Optional.empty();
         }
-        if (!Strings.isNullOrEmpty(invocation.getParameterString())) {
+        if (!Strings.isNullOrEmpty(invocation.getParameterString()) && enableParameterCapture) {
             return Optional.of(registry.timer(
                     String.format("%s.%s.%s.%s.%s",
                             prefix,
@@ -46,6 +48,5 @@ public class FunctionMetricsManager {
                             invocation.getMethodName(),
                             domain.getValue())));
         }
-
     }
 }
