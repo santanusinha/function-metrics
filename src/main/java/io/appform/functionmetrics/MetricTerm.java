@@ -28,7 +28,7 @@ import java.lang.annotation.Target;
  * Note how the parameter value is trimmed, lower-cased and stripped of non-alphabetic characters.
  * If there were multiple parameters annotated with {@link MetricTerm} in the function bar, then their string values are simply joined together by a dot.
  * The order of formal parameters in the method signature is maintained in generating the concatenated metric name component for parameter values.
- * NOTE: Formal parameters annotated with this annotation must be of type {@code String}, otherwise the string value of parameter is ignored
+ * NOTE: Formal parameters annotated with this annotation must be of type {@code String or @code Enum}, otherwise the string value of parameter is ignored
  * Also, formal parameter values must match this regexp ^[a-zA-Z_][a-zA-Z_0-9]*. See {@link FunctionMetricConstants}.
  *
  */

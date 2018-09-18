@@ -65,18 +65,15 @@ public class FunctionTimerAspect {
                         if (metricTerm == null) {
                             return null;
                         }
-                        return new Pair<>(metricTerm.order(), pair.getValue());
+                        Object paramValue = pair.getValue();
+                        String paramValueStr = convertToString(pair.getValue()).trim().toLowerCase();
+                        boolean matches = VALID_PARAM_VALUE_PATTERN.matcher(paramValueStr).matches();
+                        String sanitizedParamValue = matches ? CaseFormat.LOWER_UNDERSCORE.to(options.getCaseFormat(), paramValueStr) : "";
+                        return new Pair<>(metricTerm.order(), sanitizedParamValue);
                     })
-                    .filter(Objects::nonNull) // filter parameters that are not annotated
-                    .sorted(Comparator.comparingInt(Pair::getKey)) // sort metrics terms by order attribute
+                    .filter(Objects::nonNull) // filter parameters that are not metric terms
+                    .sorted(Comparator.comparingInt(Pair::getKey)) // sort metric terms by order attribute
                     .map(Pair::getValue) // extract parameter value
-                    .map(paramValue -> !(paramValue instanceof String) ? "" : (String) paramValue)
-                    .map(String::trim)
-                    .map(paramValue -> {
-                        boolean matches = VALID_PARAM_VALUE_PATTERN.matcher(paramValue).matches();
-                        return matches ? paramValue.toLowerCase() : "";
-                    })
-                    .map(paramValue -> CaseFormat.LOWER_UNDERSCORE.to(options.getCaseFormat(), paramValue))
                     .collect(Collectors.toList());
 
             // if and only if after all transformations none of the parameter values are null or empty will we add the parameter string to the metric name
@@ -111,6 +108,18 @@ public class FunctionTimerAspect {
 
     private void updateTimer(Timer timer, Stopwatch stopwatch) {
         timer.update(stopwatch.elapsed(TimeUnit.MILLISECONDS), TimeUnit.MILLISECONDS);
+    }
+
+    private String convertToString(Object obj) {
+        if (obj == null) {
+            return "";
+        }
+        if (obj instanceof String) {
+            return (String) obj;
+        } else if (obj instanceof Enum) {
+            return ((Enum) obj).name();
+        }
+        return "";
     }
 
 }
