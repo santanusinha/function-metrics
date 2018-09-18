@@ -22,5 +22,7 @@ public class FunctionInvocation {
         return methodName;
     }
 
-    public String getParameterString() { return parameterString; }
+    public String getParameterString() {
+        return parameterString;
+    }
 }

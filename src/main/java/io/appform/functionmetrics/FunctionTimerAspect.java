@@ -1,6 +1,7 @@
 package io.appform.functionmetrics;
 
 import com.codahale.metrics.Timer;
+import com.google.common.base.CaseFormat;
 import com.google.common.base.Joiner;
 import com.google.common.base.Stopwatch;
 import com.google.common.base.Strings;
@@ -18,6 +19,7 @@ import org.slf4j.LoggerFactory;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
@@ -53,30 +55,36 @@ public class FunctionTimerAspect {
                                     ? callSignature.getName()
                                     : monitoredFunction.method();
         final String[] parameterNames = methodSignature.getParameterNames();
-        String parameterString = "";
-        List<String> paramValues = Streams.zip(Arrays.stream(methodSignature.getMethod().getParameters()), Arrays.stream(joinPoint.getArgs()), Pair::new)
-                .filter(pair -> {
-                    MetricTerm metricTerm = pair.getKey().getAnnotation(MetricTerm.class);
-                    return metricTerm != null;
-                })
-                .map(pair -> {
-                    MetricTerm metricTerm = pair.getKey().getAnnotation(MetricTerm.class);
-                    return new Pair<>(metricTerm.order(), pair.getValue());
-                })
-                .sorted(Comparator.comparingInt(Pair::getKey))
-                .map(Pair::getValue)
-                .map(paramValue -> paramValue != null ? paramValue : "")
-                .map(paramValue -> paramValue instanceof String ? (String) paramValue : "")
-                .map(String::trim)
-                .map(paramValue -> NON_ALPHABET_CHARS_PATTERN.matcher(paramValue).replaceAll(""))
-                .map(String::toLowerCase)
-                .collect(Collectors.toList());
+        final Options options = FunctionMetricsManager.getOptions();
 
-        // if and only if after all transformations none of the parameter values are null or empty will we add the parameter string to the metric name
-        if (paramValues
-                .stream()
-                .noneMatch(Strings::isNullOrEmpty)) {
-            parameterString = Joiner.on(METRIC_DELIMITER).join(paramValues);
+        String parameterString = "";
+        if (options.isEnableParameterCapture()) {
+            List<String> paramValues = Streams.zip(Arrays.stream(methodSignature.getMethod().getParameters()), Arrays.stream(joinPoint.getArgs()), Pair::new)
+                    .map(pair -> {
+                        MetricTerm metricTerm = pair.getKey().getAnnotation(MetricTerm.class);
+                        if (metricTerm == null) {
+                            return null;
+                        }
+                        return new Pair<>(metricTerm.order(), pair.getValue());
+                    })
+                    .filter(Objects::nonNull) // filter parameters that are not annotated
+                    .sorted(Comparator.comparingInt(Pair::getKey)) // sort metrics terms by order attribute
+                    .map(Pair::getValue) // extract parameter value
+                    .map(paramValue -> !(paramValue instanceof String) ? "" : (String) paramValue)
+                    .map(String::trim)
+                    .map(paramValue -> {
+                        boolean matches = VALID_PARAM_VALUE_PATTERN.matcher(paramValue).matches();
+                        return matches ? paramValue.toLowerCase() : "";
+                    })
+                    .map(paramValue -> CaseFormat.LOWER_UNDERSCORE.to(options.getCaseFormat(), paramValue))
+                    .collect(Collectors.toList());
+
+            // if and only if after all transformations none of the parameter values are null or empty will we add the parameter string to the metric name
+            if (paramValues
+                    .stream()
+                    .noneMatch(Strings::isNullOrEmpty)) {
+                parameterString = Joiner.on(METRIC_DELIMITER).join(paramValues);
+            }
         }
 
         log.trace("Called for class: {} method: {} parameterString: {}", className, methodName, parameterString);

@@ -3,6 +3,7 @@ package io.appform.functionmetrics;
 import com.codahale.metrics.MetricRegistry;
 import com.codahale.metrics.SharedMetricRegistries;
 import com.codahale.metrics.Timer;
+import com.google.common.base.CaseFormat;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -16,7 +17,13 @@ public class FunctionTimerAspectTest {
 
     @BeforeClass
     public static void setup() {
-        FunctionMetricsManager.initialize("phonepe.test", registry, true);
+        FunctionMetricsManager.initialize(
+                "phonepe.test",
+                registry,
+                new Options.OptionsBuilder()
+                        .enableParameterCapture(true)
+                        .caseFormat(CaseFormat.LOWER_CAMEL)
+                        .build());
     }
 
     @Test
@@ -70,10 +77,10 @@ public class FunctionTimerAspectTest {
     @Test
     public void testMetricsCollectionParameterValid() throws Exception {
         final MyClass myClass = new MyClass();
-        myClass.parameterValidFunction("a","b");
+        myClass.parameterValidFunction("a","John_Cartier047");
 
         final FunctionInvocation invocation
-                = new FunctionInvocation("MyClass", "parameterValidFunction", "a.b");
+                = new FunctionInvocation("MyClass", "parameterValidFunction", "a.johnCartier047");
         final Timer failureTimer
                 = FunctionMetricsManager.timer(TimerDomain.FAILURE, invocation).orElse(null);
         Assert.assertNotNull(failureTimer);
