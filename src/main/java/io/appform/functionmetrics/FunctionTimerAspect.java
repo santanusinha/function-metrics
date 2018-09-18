@@ -1,8 +1,12 @@
 package io.appform.functionmetrics;
 
 import com.codahale.metrics.Timer;
+import com.google.common.base.CaseFormat;
+import com.google.common.base.Joiner;
 import com.google.common.base.Stopwatch;
 import com.google.common.base.Strings;
+import com.google.common.collect.Streams;
+import javafx.util.Pair;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.Signature;
 import org.aspectj.lang.annotation.Around;
@@ -12,7 +16,14 @@ import org.aspectj.lang.reflect.MethodSignature;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.Arrays;
+import java.util.Comparator;
+import java.util.List;
+import java.util.Objects;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
+
+import static io.appform.functionmetrics.FunctionMetricConstants.*;
 
 /**
  * This aspect ensures that only methods annotated with {@link MonitoredFunction} are measured.
@@ -43,8 +54,38 @@ public class FunctionTimerAspect {
         final String methodName = Strings.isNullOrEmpty(monitoredFunction.method())
                                     ? callSignature.getName()
                                     : monitoredFunction.method();
-        log.trace("Called for class: {} method: {}", className, methodName);
-        final FunctionInvocation invocation = new FunctionInvocation(className, methodName);
+        final String[] parameterNames = methodSignature.getParameterNames();
+        final Options options = FunctionMetricsManager.getOptions();
+
+        String parameterString = "";
+        if (options.isEnableParameterCapture()) {
+            List<String> paramValues = Streams.zip(Arrays.stream(methodSignature.getMethod().getParameters()), Arrays.stream(joinPoint.getArgs()), Pair::new)
+                    .map(pair -> {
+                        MetricTerm metricTerm = pair.getKey().getAnnotation(MetricTerm.class);
+                        if (metricTerm == null) {
+                            return null;
+                        }
+                        Object paramValue = pair.getValue();
+                        String paramValueStr = convertToString(pair.getValue()).trim().toLowerCase();
+                        boolean matches = VALID_PARAM_VALUE_PATTERN.matcher(paramValueStr).matches();
+                        String sanitizedParamValue = matches ? CaseFormat.LOWER_UNDERSCORE.to(options.getCaseFormat(), paramValueStr) : "";
+                        return new Pair<>(metricTerm.order(), sanitizedParamValue);
+                    })
+                    .filter(Objects::nonNull) // filter parameters that are not metric terms
+                    .sorted(Comparator.comparingInt(Pair::getKey)) // sort metric terms by order attribute
+                    .map(Pair::getValue) // extract parameter value
+                    .collect(Collectors.toList());
+
+            // if and only if after all transformations none of the parameter values are null or empty will we add the parameter string to the metric name
+            if (paramValues
+                    .stream()
+                    .noneMatch(Strings::isNullOrEmpty)) {
+                parameterString = Joiner.on(METRIC_DELIMITER).join(paramValues);
+            }
+        }
+
+        log.trace("Called for class: {} method: {} parameterString: {}", className, methodName, parameterString);
+        final FunctionInvocation invocation = new FunctionInvocation(className, methodName, parameterString);
         Stopwatch stopwatch = Stopwatch.createStarted();
         try {
             Object response = joinPoint.proceed();
@@ -67,6 +108,18 @@ public class FunctionTimerAspect {
 
     private void updateTimer(Timer timer, Stopwatch stopwatch) {
         timer.update(stopwatch.elapsed(TimeUnit.MILLISECONDS), TimeUnit.MILLISECONDS);
+    }
+
+    private String convertToString(Object obj) {
+        if (obj == null) {
+            return "";
+        }
+        if (obj instanceof String) {
+            return (String) obj;
+        } else if (obj instanceof Enum) {
+            return ((Enum) obj).name();
+        }
+        return "";
     }
 
 }
