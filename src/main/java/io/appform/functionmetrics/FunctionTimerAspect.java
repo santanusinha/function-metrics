@@ -58,7 +58,7 @@ public class FunctionTimerAspect {
         final Options options = FunctionMetricsManager.getOptions();
 
         String parameterString = "";
-        if (options.isEnableParameterCapture()) {
+        if (options != null && options.isEnableParameterCapture()) {
             List<String> paramValues = Streams.zip(Arrays.stream(methodSignature.getMethod().getParameters()), Arrays.stream(joinPoint.getArgs()), Pair::new)
                     .map(pair -> {
                         MetricTerm metricTerm = pair.getKey().getAnnotation(MetricTerm.class);
