@@ -22,7 +22,7 @@ public class FunctionTimerAspectTest {
                 registry,
                 new Options.OptionsBuilder()
                         .enableParameterCapture(true)
-                        .caseFormat(CaseFormat.LOWER_CAMEL)
+                        .caseFormat(CaseFormat.LOWER_UNDERSCORE)
                         .build());
     }
 
