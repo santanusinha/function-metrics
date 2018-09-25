@@ -1,10 +1,11 @@
 package io.appform.functionmetrics;
 
 import com.google.common.base.CaseFormat;
+import com.google.common.base.Converter;
 
 public class Options {
     private boolean enableParameterCapture;
-    private CaseFormat caseFormat = CaseFormat.LOWER_CAMEL;
+    private Converter<String, String> caseFormatConverter = CaseFormat.LOWER_CAMEL.converterTo(CaseFormat.LOWER_CAMEL);
 
     public boolean isEnableParameterCapture() {
         return enableParameterCapture;
@@ -14,34 +15,34 @@ public class Options {
         this.enableParameterCapture = enableParameterCapture;
     }
 
-    public CaseFormat getCaseFormat() {
-        return caseFormat;
+    public Converter<String, String> getCaseFormatConverter() {
+        return caseFormatConverter;
     }
 
-    public void setCaseFormat(final CaseFormat caseFormat) {
-        this.caseFormat = caseFormat;
+    public void setCaseFormatConverter(final Converter<String, String> caseFormatConverter) {
+        this.caseFormatConverter = caseFormatConverter;
     }
 
     public Options() {}
 
     public static class OptionsBuilder {
         private boolean enableParameterCapture;
-        private CaseFormat caseFormat;
+        private Converter<String, String> caseFormatConverter;
 
         public OptionsBuilder enableParameterCapture(final boolean enableParameterCapture) {
             this.enableParameterCapture = enableParameterCapture;
             return this;
         }
 
-        public OptionsBuilder caseFormat(final CaseFormat caseFormat) {
-            this.caseFormat = caseFormat;
+        public OptionsBuilder caseFormatConverter(final Converter<String, String> caseFormatConverter) {
+            this.caseFormatConverter = caseFormatConverter;
             return this;
         }
 
         public Options build() {
             Options options = new Options();
-            if (caseFormat != null) {
-                options.setCaseFormat(caseFormat);
+            if (caseFormatConverter != null) {
+                options.setCaseFormatConverter(caseFormatConverter);
             }
             options.setEnableParameterCapture(enableParameterCapture);
             return options;

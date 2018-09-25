@@ -68,7 +68,7 @@ public class FunctionTimerAspect {
                         Object paramValue = pair.getValue();
                         String paramValueStr = convertToString(pair.getValue()).trim();
                         boolean matches = VALID_PARAM_VALUE_PATTERN.matcher(paramValueStr).matches();
-                        String sanitizedParamValue = matches ? options.getCaseFormat().to(CaseFormat.LOWER_CAMEL, paramValueStr) : "";
+                        String sanitizedParamValue = matches ? options.getCaseFormatConverter().convert(paramValueStr) : "";
                         return new Pair<>(metricTerm.order(), sanitizedParamValue);
                     })
                     .filter(Objects::nonNull) // filter parameters that are not metric terms

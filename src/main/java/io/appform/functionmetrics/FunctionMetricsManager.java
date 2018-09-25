@@ -2,6 +2,7 @@ package io.appform.functionmetrics;
 
 import com.codahale.metrics.MetricRegistry;
 import com.codahale.metrics.Timer;
+import com.google.common.base.CaseFormat;
 import com.google.common.base.Strings;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -56,5 +57,9 @@ public class FunctionMetricsManager {
                             invocation.getMethodName(),
                             domain.getValue())));
         }
+    }
+
+    public static void main(String[] args) {
+        System.out.println(CaseFormat.LOWER_UNDERSCORE.converterTo(CaseFormat.LOWER_CAMEL).convert("blacklist_card"));
     }
 }
