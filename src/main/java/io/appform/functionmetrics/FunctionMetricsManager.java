@@ -58,8 +58,4 @@ public class FunctionMetricsManager {
                             domain.getValue())));
         }
     }
-
-    public static void main(String[] args) {
-        System.out.println(CaseFormat.LOWER_UNDERSCORE.converterTo(CaseFormat.LOWER_CAMEL).convert("blacklist_card"));
-    }
 }
