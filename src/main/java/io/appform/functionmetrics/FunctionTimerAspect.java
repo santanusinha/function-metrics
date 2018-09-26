@@ -1,7 +1,6 @@
 package io.appform.functionmetrics;
 
 import com.codahale.metrics.Timer;
-import com.google.common.base.CaseFormat;
 import com.google.common.base.Joiner;
 import com.google.common.base.Stopwatch;
 import com.google.common.base.Strings;
@@ -23,7 +22,8 @@ import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
-import static io.appform.functionmetrics.FunctionMetricConstants.*;
+import static io.appform.functionmetrics.FunctionMetricConstants.METRIC_DELIMITER;
+import static io.appform.functionmetrics.FunctionMetricConstants.VALID_PARAM_VALUE_PATTERN;
 
 /**
  * This aspect ensures that only methods annotated with {@link MonitoredFunction} are measured.
@@ -68,7 +68,7 @@ public class FunctionTimerAspect {
                         Object paramValue = pair.getValue();
                         String paramValueStr = convertToString(pair.getValue()).trim();
                         boolean matches = VALID_PARAM_VALUE_PATTERN.matcher(paramValueStr).matches();
-                        String sanitizedParamValue = matches ? options.getCaseFormat().to(CaseFormat.LOWER_CAMEL, paramValueStr) : "";
+                        String sanitizedParamValue = matches ? options.getCaseFormatConverter().convert(paramValueStr) : "";
                         return new Pair<>(metricTerm.order(), sanitizedParamValue);
                     })
                     .filter(Objects::nonNull) // filter parameters that are not metric terms
