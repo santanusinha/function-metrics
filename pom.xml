@@ -54,7 +54,7 @@
 
     <ciManagement>
         <system>Travis CI</system>
-        <url>https://travis-ci.org/santanusinha/dropwizard-rabbitmq-actors</url>
+        <url>https://travis-ci.org/santanusinha/function-metrics</url>
     </ciManagement>
 
     <distributionManagement>
