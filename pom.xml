@@ -6,15 +6,11 @@
 
     <groupId>io.appform.functionmetrics</groupId>
     <artifactId>function-metrics</artifactId>
-    <version>1.0.3-SNAPSHOT</version>
-
-    <distributionManagement>
-        <repository>
-            <id>clojars</id>
-            <name>Clojars repository</name>
-            <url>https://clojars.org/repo</url>
-        </repository>
-    </distributionManagement>
+    <version>1.0.4</version>
+    <name>Function Metrics</name>
+    <url>https://github.com/santanusinha/function-metrics</url>
+    <description>Annotation based function level metrics</description>
+    <inceptionYear>2018</inceptionYear>
 
     <scm>
         <connection>scm:git:https://github.com/santanusinha/function-metrics.git</connection>
@@ -37,17 +33,40 @@
             <id>santanusinha</id>
             <name>Santanu Sinha</name>
             <email>santanu.sinha@gmail.com</email>
+            <roles>
+                <role>owner</role>
+                <role>developer</role>
+            </roles>
+        </developer>
+        <developer>
+            <id>godofwharf</id>
+            <name>Guruprasad Shridharan</name>
+            <roles>
+                <role>developer</role>
+            </roles>
         </developer>
     </developers>
 
-    <repositories>
-        <repository>
-            <id>clojars</id>
-            <name>Clojars repository</name>
-            <url>https://clojars.org/repo</url>
-        </repository>
-    </repositories>
+    <issueManagement>
+        <system>GitHub Issues</system>
+        <url>https://github.com/santanusinha/function-metrics/issues</url>
+    </issueManagement>
 
+    <ciManagement>
+        <system>Travis CI</system>
+        <url>https://travis-ci.org/santanusinha/dropwizard-rabbitmq-actors</url>
+    </ciManagement>
+
+    <distributionManagement>
+        <snapshotRepository>
+            <id>ossrh</id>
+            <url>https://oss.sonatype.org/content/repositories/snapshots</url>
+        </snapshotRepository>
+        <repository>
+            <id>ossrh</id>
+            <url>https://oss.sonatype.org/service/local/staging/deploy/maven2/</url>
+        </repository>
+    </distributionManagement>
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
@@ -74,7 +93,7 @@
         <dependency>
             <groupId>com.google.guava</groupId>
             <artifactId>guava</artifactId>
-            <version>21.0</version>
+            <version>28.0-jre</version>
             <scope>provided</scope>
         </dependency>
         <dependency>
@@ -152,7 +171,53 @@
                     </execution>
                 </executions>
             </plugin>
+            <plugin>
+                <groupId>org.sonatype.plugins</groupId>
+                <artifactId>nexus-staging-maven-plugin</artifactId>
+                <version>1.6.7</version>
+                <extensions>true</extensions>
+                <configuration>
+                    <serverId>ossrh</serverId>
+                    <nexusUrl>https://oss.sonatype.org/</nexusUrl>
+                    <autoReleaseAfterClose>true</autoReleaseAfterClose>
+                </configuration>
+            </plugin>
         </plugins>
     </build>
 
+    <profiles>
+        <profile>
+            <id>release</id>
+            <activation>
+                <property>
+                    <name>release</name>
+                    <value>true</value>
+                </property>
+            </activation>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-gpg-plugin</artifactId>
+                        <version>1.6</version>
+                        <executions>
+                            <execution>
+                                <id>sign-artifacts</id>
+                                <phase>verify</phase>
+                                <goals>
+                                    <goal>sign</goal>
+                                </goals>
+                                <configuration>
+                                    <useAgent>true</useAgent>
+                                    <executable>gpg2</executable>
+                                    <!-- Run something like 'gpg2 -ab out' to cache the creds
+                                     on agent before running if needed -->
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
 </project>

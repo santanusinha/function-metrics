@@ -3,7 +3,7 @@ This simple library provides a way to annotate your functions and get success, f
 
 # Requirements
 
-* _JDK -_ Oracle/Sun JDK 1.8+
+* _JDK -_ Oracle/Sun JDK 1.8+/OpenJDK 8+
 * _Dropwizard Metrics (Formerly called Yammer Metrics) -_ 3.2.2+
 * _Guava -_ 21.0+
 

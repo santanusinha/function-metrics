@@ -19,19 +19,21 @@ package io.appform.functionmetrics;
 /**
  *
  */
-public enum TimerDomain {
-    SUCCESS("success"),
-    FAILURE("failure"),
-    ALL("all");
 
-    private final String value;
+public class Pair<K, V> {
+    private final K key;
+    private final V value;
 
-    TimerDomain(String value) {
-
+    public Pair(K key, V value) {
+        this.key = key;
         this.value = value;
     }
 
-    public String getValue() {
+    public K getKey() {
+        return key;
+    }
+
+    public V getValue() {
         return value;
     }
 }

@@ -1,3 +1,19 @@
+/*
+ * Copyright (c) 2019 Santanu Sinha <santanu.sinha@gmail.com>
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ *  limitations under the License.
+ */
+
 package io.appform.functionmetrics;
 
 import com.codahale.metrics.Timer;
@@ -5,7 +21,6 @@ import com.google.common.base.Joiner;
 import com.google.common.base.Stopwatch;
 import com.google.common.base.Strings;
 import com.google.common.collect.Streams;
-import javafx.util.Pair;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.Signature;
 import org.aspectj.lang.annotation.Around;
@@ -54,18 +69,19 @@ public class FunctionTimerAspect {
         final String methodName = Strings.isNullOrEmpty(monitoredFunction.method())
                                     ? callSignature.getName()
                                     : monitoredFunction.method();
-        final String[] parameterNames = methodSignature.getParameterNames();
         final Options options = FunctionMetricsManager.getOptions();
 
         String parameterString = "";
         if (options != null && options.isEnableParameterCapture()) {
-            List<String> paramValues = Streams.zip(Arrays.stream(methodSignature.getMethod().getParameters()), Arrays.stream(joinPoint.getArgs()), Pair::new)
+            final List<String> paramValues
+                    = Streams.zip(
+                    Arrays.stream(methodSignature.getMethod().getParameters()), Arrays.stream(joinPoint.getArgs()),
+                            Pair::new)
                     .map(pair -> {
                         MetricTerm metricTerm = pair.getKey().getAnnotation(MetricTerm.class);
                         if (metricTerm == null) {
                             return null;
                         }
-                        Object paramValue = pair.getValue();
                         String paramValueStr = convertToString(pair.getValue()).trim();
                         boolean matches = VALID_PARAM_VALUE_PATTERN.matcher(paramValueStr).matches();
                         String sanitizedParamValue = matches ? options.getCaseFormatConverter().convert(paramValueStr) : "";
@@ -94,7 +110,7 @@ public class FunctionTimerAspect {
                     .ifPresent(timer -> updateTimer(timer, stopwatch));
             return response;
         }
-        catch(Throwable t) {
+        catch (Throwable t) {
             stopwatch.stop();
             FunctionMetricsManager.timer(TimerDomain.FAILURE, invocation)
                     .ifPresent(timer -> updateTimer(timer, stopwatch));
