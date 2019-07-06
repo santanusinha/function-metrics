@@ -22,7 +22,7 @@ Put this into the `dependencies` section of your pom file:
     <dependency>
         <groupId>io.appform.functionmetrics</groupId>
         <artifactId>function-metrics</artifactId>
-        <version>1.0.2</version>
+        <version>1.0.5</version>
     </dependency>
 ```
 
@@ -36,7 +36,7 @@ If you are not using guava and metrics already, then add the following as well:
     <dependency>
         <groupId>com.google.guava</groupId>
         <artifactId>guava</artifactId>
-        <version>21.0</version>
+        <version>28.0-jre</version>
     </dependency>
 ```
 
