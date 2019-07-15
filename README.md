@@ -114,7 +114,7 @@ For example
 
 #### Preparing a function for metric collection
 
-This is simple. Just annotate the method with `@MonitoredFucntion`.
+This is simple. Just annotate the method with `@MonitoredFunction`.
 
 For example:
 ```
@@ -133,6 +133,24 @@ You can override the name of the class/method that will be populated in the metr
     }
 ```
 _**NOTE:** This is handy in case you want to differentiate between overloaded methods. _
+
+#### Parameter based metric name
+To add method parameter value in metric name add `@MetricTerm` annotation to parameter.
+This can be useful for eg - while adding tenant level metrics
+```
+    @MonitoredFunction(className="Blah", method="randomFunction")
+    private void myFunction(@MetricTerm String tenant) {
+        //Demo function
+    }
+```
+_**NOTE:** You have to initialize the manager with Options to do parameter capturing. _
+
+```
+FunctionMetricsManager.initialize("functions", new MetricRegistry(), new Options.OptionsBuilder()
+                .enableParameterCapture(true)
+                .caseFormat(CaseFormat.UPPER_CAMEL)
+                .build());
+```
 
 
 ## What metrics will get pushed
