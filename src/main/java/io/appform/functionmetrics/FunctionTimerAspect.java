@@ -74,8 +74,9 @@ public class FunctionTimerAspect {
         if (options != null
                 && options.isEnableParameterCapture()
                 && methodSignature.getMethod().getParameterCount() != joinPoint.getArgs().length) {
-            log.warn("Unusual scenario - number of parameters in method signature doesn't match with args supplied in runtime," +
-                    "so skipping parameter capture in metric name [class = {}, method = {}]", className, methodName);
+            log.warn("Unusual scenario - number of parameters in method signature doesn't match with args supplied in " +
+                            "runtime, so skipping parameter capture altogether in metric name for this invocation " +
+                            "[class = {}, method = {}]", className, methodName);
             log.warn("Skipping parameter capture altogether in this case for this invocation");
 
         }
