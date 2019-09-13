@@ -72,38 +72,40 @@ public class FunctionTimerAspect {
 
         String parameterString = "";
         if (options != null
-                && options.isEnableParameterCapture()
-                && methodSignature.getMethod().getParameterCount() != joinPoint.getArgs().length) {
-            log.warn("Unusual scenario - number of parameters in method signature doesn't match with args supplied in " +
-                            "runtime, so skipping parameter capture altogether in metric name for this invocation " +
-                            "[class = {}, method = {}]", className, methodName);
-            log.warn("Skipping parameter capture altogether in this case for this invocation");
-
-        }
-        if (options != null
-                && options.isEnableParameterCapture()
-                && methodSignature.getMethod().getParameterCount() == joinPoint.getArgs().length) {
-            final List<String> paramValues
-                    = IntStream.range(0, methodSignature.getMethod().getParameterCount())
+                && options.isEnableParameterCapture()) {
+            boolean valid = true;
+            if (methodSignature.getMethod().getParameterCount() != joinPoint.getArgs().length) {
+                log.warn("Unusual scenario - number of parameters in method signature doesn't match with args supplied in " +
+                        "runtime, so skipping parameter capture altogether in metric name for this invocation " +
+                        "[class = {}, method = {}]", className, methodName);
+                valid = false;
+            }
+            if (valid) {
+                final List<String> paramValues
+                        = IntStream.range(0, methodSignature.getMethod().getParameterCount())
                         .mapToObj(i -> {
-                            MetricTerm metricTerm = methodSignature.getMethod().getParameters()[i].getAnnotation(MetricTerm.class);
+                            MetricTerm metricTerm = methodSignature.getMethod()
+                                    .getParameters()[i].getAnnotation(MetricTerm.class);
                             if (metricTerm == null) {
                                 return null;
                             }
                             String paramValueStr = convertToString(joinPoint.getArgs()[i]).trim();
                             boolean matches = VALID_PARAM_VALUE_PATTERN.matcher(paramValueStr).matches();
-                            String sanitizedParamValue = matches ? options.getCaseFormatConverter().convert(paramValueStr) : "";
+                            String sanitizedParamValue = matches ?
+                                    options.getCaseFormatConverter().convert(paramValueStr) : "";
                             return new Pair<>(metricTerm.order(), sanitizedParamValue);
                         })
                         .filter(Objects::nonNull) // filter parameters that are not metric terms
                         .sorted(Comparator.comparingInt(Pair::getKey)) // sort metric terms by order attribute
                         .map(Pair::getValue) // extract parameter value
                         .collect(Collectors.toList());
-            // if and only if after all transformations none of the parameter values are null or empty will we add the parameter string to the metric name
-            if (paramValues
-                    .stream()
-                    .noneMatch(Strings::isNullOrEmpty)) {
-                parameterString = Joiner.on(METRIC_DELIMITER).join(paramValues);
+                // if and only if after all transformations none of the parameter values are null or
+                // empty will we add the parameter string to the metric name
+                if (paramValues
+                        .stream()
+                        .noneMatch(Strings::isNullOrEmpty)) {
+                    parameterString = Joiner.on(METRIC_DELIMITER).join(paramValues);
+                }
             }
         }
 
