@@ -20,7 +20,6 @@ import com.codahale.metrics.Timer;
 import com.google.common.base.Joiner;
 import com.google.common.base.Stopwatch;
 import com.google.common.base.Strings;
-import com.google.common.collect.Streams;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.Signature;
 import org.aspectj.lang.annotation.Around;
@@ -30,12 +29,12 @@ import org.aspectj.lang.reflect.MethodSignature;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 import static io.appform.functionmetrics.FunctionMetricConstants.METRIC_DELIMITER;
 import static io.appform.functionmetrics.FunctionMetricConstants.VALID_PARAM_VALUE_PATTERN;
@@ -72,31 +71,41 @@ public class FunctionTimerAspect {
         final Options options = FunctionMetricsManager.getOptions();
 
         String parameterString = "";
-        if (options != null && options.isEnableParameterCapture()) {
-            final List<String> paramValues
-                    = Streams.zip(
-                    Arrays.stream(methodSignature.getMethod().getParameters()), Arrays.stream(joinPoint.getArgs()),
-                            Pair::new)
-                    .map(pair -> {
-                        MetricTerm metricTerm = pair.getKey().getAnnotation(MetricTerm.class);
-                        if (metricTerm == null) {
-                            return null;
-                        }
-                        String paramValueStr = convertToString(pair.getValue()).trim();
-                        boolean matches = VALID_PARAM_VALUE_PATTERN.matcher(paramValueStr).matches();
-                        String sanitizedParamValue = matches ? options.getCaseFormatConverter().convert(paramValueStr) : "";
-                        return new Pair<>(metricTerm.order(), sanitizedParamValue);
-                    })
-                    .filter(Objects::nonNull) // filter parameters that are not metric terms
-                    .sorted(Comparator.comparingInt(Pair::getKey)) // sort metric terms by order attribute
-                    .map(Pair::getValue) // extract parameter value
-                    .collect(Collectors.toList());
-
-            // if and only if after all transformations none of the parameter values are null or empty will we add the parameter string to the metric name
-            if (paramValues
-                    .stream()
-                    .noneMatch(Strings::isNullOrEmpty)) {
-                parameterString = Joiner.on(METRIC_DELIMITER).join(paramValues);
+        if (options != null
+                && options.isEnableParameterCapture()) {
+            boolean valid = true;
+            if (methodSignature.getMethod().getParameterCount() != joinPoint.getArgs().length) {
+                log.warn("Unusual scenario - number of parameters in method signature doesn't match with args supplied in " +
+                        "runtime, so skipping parameter capture altogether in metric name for this invocation " +
+                        "[class = {}, method = {}]", className, methodName);
+                valid = false;
+            }
+            if (valid) {
+                final List<String> paramValues
+                        = IntStream.range(0, methodSignature.getMethod().getParameterCount())
+                        .mapToObj(i -> {
+                            MetricTerm metricTerm = methodSignature.getMethod()
+                                    .getParameters()[i].getAnnotation(MetricTerm.class);
+                            if (metricTerm == null) {
+                                return null;
+                            }
+                            String paramValueStr = convertToString(joinPoint.getArgs()[i]).trim();
+                            boolean matches = VALID_PARAM_VALUE_PATTERN.matcher(paramValueStr).matches();
+                            String sanitizedParamValue = matches ?
+                                    options.getCaseFormatConverter().convert(paramValueStr) : "";
+                            return new Pair<>(metricTerm.order(), sanitizedParamValue);
+                        })
+                        .filter(Objects::nonNull) // filter parameters that are not metric terms
+                        .sorted(Comparator.comparingInt(Pair::getKey)) // sort metric terms by order attribute
+                        .map(Pair::getValue) // extract parameter value
+                        .collect(Collectors.toList());
+                // if and only if after all transformations none of the parameter values are null or
+                // empty will we add the parameter string to the metric name
+                if (paramValues
+                        .stream()
+                        .noneMatch(Strings::isNullOrEmpty)) {
+                    parameterString = Joiner.on(METRIC_DELIMITER).join(paramValues);
+                }
             }
         }
 
