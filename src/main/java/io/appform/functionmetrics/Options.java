@@ -21,6 +21,7 @@ import com.google.common.base.Converter;
 
 public class Options {
     private boolean enableParameterCapture;
+    private boolean enableTracing;
     private Converter<String, String> caseFormatConverter = CaseFormat.LOWER_CAMEL.converterTo(CaseFormat.LOWER_CAMEL);
 
     public boolean isEnableParameterCapture() {
@@ -37,6 +38,14 @@ public class Options {
 
     public void setCaseFormatConverter(final Converter<String, String> caseFormatConverter) {
         this.caseFormatConverter = caseFormatConverter;
+    }
+
+    public boolean isEnableTracing() {
+        return enableTracing;
+    }
+
+    public void setEnableTracing(final boolean enableTracing) {
+        this.enableTracing = enableTracing;
     }
 
     public Options() {

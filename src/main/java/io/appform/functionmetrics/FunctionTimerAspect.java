@@ -20,6 +20,12 @@ import com.codahale.metrics.Timer;
 import com.google.common.base.Joiner;
 import com.google.common.base.Stopwatch;
 import com.google.common.base.Strings;
+import java.util.Comparator;
+import java.util.List;
+import java.util.Objects;
+import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.Signature;
 import org.aspectj.lang.annotation.Around;
@@ -28,13 +34,6 @@ import org.aspectj.lang.annotation.Pointcut;
 import org.aspectj.lang.reflect.MethodSignature;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.util.Comparator;
-import java.util.List;
-import java.util.Objects;
-import java.util.concurrent.TimeUnit;
-import java.util.stream.Collectors;
-import java.util.stream.IntStream;
 
 import static io.appform.functionmetrics.FunctionMetricConstants.METRIC_DELIMITER;
 import static io.appform.functionmetrics.FunctionMetricConstants.VALID_PARAM_VALUE_PATTERN;
@@ -63,12 +62,13 @@ public class FunctionTimerAspect {
         final MethodSignature methodSignature = MethodSignature.class.cast(callSignature);
         MonitoredFunction monitoredFunction = methodSignature.getMethod().getAnnotation(MonitoredFunction.class);
         final String className = Strings.isNullOrEmpty(monitoredFunction.className())
-                                    ? callSignature.getDeclaringType().getSimpleName()
-                                    : monitoredFunction.className();
+                ? callSignature.getDeclaringType().getSimpleName()
+                : monitoredFunction.className();
         final String methodName = Strings.isNullOrEmpty(monitoredFunction.method())
-                                    ? callSignature.getName()
-                                    : monitoredFunction.method();
+                ? callSignature.getName()
+                : monitoredFunction.method();
         final Options options = FunctionMetricsManager.getOptions();
+        final boolean tracingEnabled = isTracingEnabled(options, monitoredFunction);
 
         String parameterString = "";
         if (options != null
@@ -111,24 +111,37 @@ public class FunctionTimerAspect {
 
         log.trace("Called for class: {} method: {} parameterString: {}", className, methodName, parameterString);
         final FunctionInvocation invocation = new FunctionInvocation(className, methodName, parameterString);
+        final TraceManager traceManager = new TraceManager();
         Stopwatch stopwatch = Stopwatch.createStarted();
         try {
+            if (tracingEnabled) {
+                traceManager.startSpan(methodName, className, parameterString);
+            }
             Object response = joinPoint.proceed();
             stopwatch.stop();
             FunctionMetricsManager.timer(TimerDomain.SUCCESS, invocation)
                     .ifPresent(timer -> updateTimer(timer, stopwatch));
+            traceManager.addSuccessTagToSpan();
             return response;
-        }
-        catch (Throwable t) {
+        } catch (Throwable t) {
             stopwatch.stop();
+            traceManager.addErrorTagToSpan();
             FunctionMetricsManager.timer(TimerDomain.FAILURE, invocation)
                     .ifPresent(timer -> updateTimer(timer, stopwatch));
             throw t;
-        }
-        finally {
+        } finally {
+            traceManager.closeSpan();
             FunctionMetricsManager.timer(TimerDomain.ALL, invocation)
                     .ifPresent(timer -> updateTimer(timer, stopwatch));
         }
+    }
+
+    private boolean isTracingEnabled(final Options options,
+                                     final MonitoredFunction monitoredFunction) {
+        if (options == null) {
+            return false;
+        }
+        return options.isEnableTracing() && !monitoredFunction.disableTracing();
     }
 
     private void updateTimer(Timer timer, Stopwatch stopwatch) {
