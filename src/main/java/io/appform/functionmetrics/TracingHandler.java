@@ -36,7 +36,7 @@ public class TracingHandler {
             if (parentSpan == null) {
                 return null;
             }
-            Span span = tracer.buildSpan("method")
+            Span span = tracer.buildSpan("method:" + methodName)
                     .asChildOf(parentSpan)
                     .withTag("method.class", className)
                     .withTag("method.name", methodName)
