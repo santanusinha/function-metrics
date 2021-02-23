@@ -20,6 +20,9 @@ import com.codahale.metrics.Timer;
 import com.google.common.base.Joiner;
 import com.google.common.base.Stopwatch;
 import com.google.common.base.Strings;
+import io.opentracing.Scope;
+import io.opentracing.Span;
+import io.opentracing.Tracer;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
@@ -111,26 +114,29 @@ public class FunctionTimerAspect {
 
         log.trace("Called for class: {} method: {} parameterString: {}", className, methodName, parameterString);
         final FunctionInvocation invocation = new FunctionInvocation(className, methodName, parameterString);
-        final TraceManager traceManager = new TraceManager();
         Stopwatch stopwatch = Stopwatch.createStarted();
+        Span span = null;
+        Scope scope = null;
         try {
             if (tracingEnabled) {
-                traceManager.startSpan(methodName, className, parameterString);
+                final Tracer tracer = TracingHandler.getTracer();
+                span = TracingHandler.startSpan(tracer, methodName, className, parameterString);
+                scope = TracingHandler.startScope(tracer, span);
             }
             Object response = joinPoint.proceed();
             stopwatch.stop();
             FunctionMetricsManager.timer(TimerDomain.SUCCESS, invocation)
                     .ifPresent(timer -> updateTimer(timer, stopwatch));
-            traceManager.addSuccessTagToSpan();
+            TracingHandler.addSuccessTagToSpan(span);
             return response;
         } catch (Throwable t) {
             stopwatch.stop();
-            traceManager.addErrorTagToSpan();
+            TracingHandler.addErrorTagToSpan(span);
             FunctionMetricsManager.timer(TimerDomain.FAILURE, invocation)
                     .ifPresent(timer -> updateTimer(timer, stopwatch));
             throw t;
         } finally {
-            traceManager.closeSpan();
+            TracingHandler.closeSpanAndScope(span, scope);
             FunctionMetricsManager.timer(TimerDomain.ALL, invocation)
                     .ifPresent(timer -> updateTimer(timer, stopwatch));
         }
