@@ -89,7 +89,8 @@ public class FunctionTimerAspect {
                             if (metricTerm == null) {
                                 return null;
                             }
-                            String paramValueStr = convertToString(joinPoint.getArgs()[i]).trim();
+                            String paramValueStr = convertToString(joinPoint.getArgs()[i]).trim()
+                                    .replace("-","");
                             boolean matches = VALID_PARAM_VALUE_PATTERN.matcher(paramValueStr).matches();
                             String sanitizedParamValue = matches ?
                                     options.getCaseFormatConverter().convert(paramValueStr) : "";
