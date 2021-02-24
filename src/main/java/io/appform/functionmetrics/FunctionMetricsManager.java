@@ -19,9 +19,10 @@ package io.appform.functionmetrics;
 import com.codahale.metrics.MetricRegistry;
 import com.codahale.metrics.Timer;
 import com.google.common.base.Strings;
-import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.util.Optional;
 
 /**
  * Global metrics manager that needs to be initialized at start
@@ -37,11 +38,9 @@ public class FunctionMetricsManager {
         return options;
     }
 
-    private FunctionMetricsManager() {
-    }
+    private FunctionMetricsManager() {}
 
-    public static void initialize(final String packageName,
-                                  final MetricRegistry registry) {
+    public static void initialize(final String packageName, final MetricRegistry registry) {
         initialize(packageName, registry, new Options());
     }
 
@@ -53,7 +52,7 @@ public class FunctionMetricsManager {
     }
 
     public static Optional<Timer> timer(final TimerDomain domain, final FunctionInvocation invocation) {
-        if (null == registry) {
+        if(null == registry) {
             log.warn("Please call FunctionalMetricsManager.initialize() to setup metrics collection. No metrics will be pushed.");
             return Optional.empty();
         }
