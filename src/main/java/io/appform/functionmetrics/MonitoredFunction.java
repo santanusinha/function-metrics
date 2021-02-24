@@ -38,4 +38,10 @@ public @interface MonitoredFunction {
      * @return Method name if provided, otherwise actual method name is used.
      */
     String method() default "";
+
+    /**
+     * Override the global tracing enabled flag.
+     * @return True if tracing is disabled, otherwise false as the default value.
+     */
+    boolean disableTracing() default false;
 }
