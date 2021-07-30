@@ -6,7 +6,7 @@
 
     <groupId>io.appform.functionmetrics</groupId>
     <artifactId>function-metrics</artifactId>
-    <version>1.0.6</version>
+    <version>2.0.0</version>
     <name>Function Metrics</name>
     <url>https://github.com/santanusinha/function-metrics</url>
     <description>Annotation based function level metrics</description>
