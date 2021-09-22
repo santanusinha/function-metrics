@@ -16,11 +16,12 @@
 
 package io.appform.functionmetrics;
 
+import lombok.experimental.UtilityClass;
+
 import java.util.regex.Pattern;
 
+@UtilityClass
 public class FunctionMetricConstants {
     public static final String METRIC_DELIMITER = ".";
     public static final Pattern VALID_PARAM_VALUE_PATTERN = Pattern.compile("^[a-zA-Z_][a-zA-Z_0-9]*$");
-
-    private FunctionMetricConstants() {}
 }

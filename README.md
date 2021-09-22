@@ -22,7 +22,7 @@ Put this into the `dependencies` section of your pom file:
     <dependency>
         <groupId>io.appform.functionmetrics</groupId>
         <artifactId>function-metrics</artifactId>
-        <version>1.0.5</version>
+        <version>1.0.7</version>
     </dependency>
 ```
 
@@ -132,7 +132,7 @@ You can override the name of the class/method that will be populated in the metr
         //Demo function
     }
 ```
-_**NOTE:** This is handy in case you want to differentiate between overloaded methods. _
+**NOTE:** This is handy in case you want to differentiate between overloaded methods. _
 
 #### Parameter based metric name
 To add method parameter value in metric name add `@MetricTerm` annotation to parameter.

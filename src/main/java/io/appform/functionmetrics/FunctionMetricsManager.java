@@ -19,23 +19,21 @@ package io.appform.functionmetrics;
 import com.codahale.metrics.MetricRegistry;
 import com.codahale.metrics.Timer;
 import com.google.common.base.Strings;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 
 import java.util.Optional;
 
 /**
  * Global metrics manager that needs to be initialized at start
  */
+@Slf4j
 public class FunctionMetricsManager {
-    private static final Logger log = LoggerFactory.getLogger(FunctionMetricsManager.class.getSimpleName());
-
     private static MetricRegistry registry;
     private static String prefix;
     private static Options options;
 
-    public static Options getOptions() {
-        return options;
+    public static Optional<Options> getOptions() {
+        return Optional.ofNullable(options);
     }
 
     private FunctionMetricsManager() {}
@@ -56,7 +54,7 @@ public class FunctionMetricsManager {
             log.warn("Please call FunctionalMetricsManager.initialize() to setup metrics collection. No metrics will be pushed.");
             return Optional.empty();
         }
-        if (!Strings.isNullOrEmpty(invocation.getParameterString()) && options.isEnableParameterCapture()) {
+        if (options.isEnableParameterCapture() && !Strings.isNullOrEmpty(invocation.getParameterString())) {
             return Optional.of(registry.timer(
                     String.format("%s.%s.%s.%s.%s",
                             prefix,
@@ -64,7 +62,8 @@ public class FunctionMetricsManager {
                             invocation.getMethodName(),
                             invocation.getParameterString(),
                             domain.getValue())));
-        } else {
+        }
+        else {
             return Optional.of(registry.timer(
                     String.format("%s.%s.%s.%s",
                             prefix,

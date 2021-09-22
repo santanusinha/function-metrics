@@ -18,34 +18,19 @@ package io.appform.functionmetrics;
 
 import com.google.common.base.CaseFormat;
 import com.google.common.base.Converter;
+import lombok.Getter;
+
+@Getter
 
 public class Options {
     private boolean enableParameterCapture;
     private Converter<String, String> caseFormatConverter = CaseFormat.LOWER_CAMEL.converterTo(CaseFormat.LOWER_CAMEL);
-
-    public boolean isEnableParameterCapture() {
-        return enableParameterCapture;
-    }
-
-    public void setEnableParameterCapture(final boolean enableParameterCapture) {
-        this.enableParameterCapture = enableParameterCapture;
-    }
-
-    public Converter<String, String> getCaseFormatConverter() {
-        return caseFormatConverter;
-    }
-
-    public void setCaseFormatConverter(final Converter<String, String> caseFormatConverter) {
-        this.caseFormatConverter = caseFormatConverter;
-    }
-
-    public Options() {
-        /* Nothing to do here */
-    }
+    private boolean disableCacheOptimisation;
 
     public static class OptionsBuilder {
         private boolean enableParameterCapture;
         private Converter<String, String> caseFormatConverter;
+        private boolean disableCacheOptimisation;
 
         public OptionsBuilder enableParameterCapture(final boolean enableParameterCapture) {
             this.enableParameterCapture = enableParameterCapture;
@@ -57,12 +42,22 @@ public class Options {
             return this;
         }
 
+        public OptionsBuilder disableCacheOptimisation() {
+            return disableCacheOptimisation(true);
+        }
+
+        public OptionsBuilder disableCacheOptimisation(final boolean disableCacheOptimisation) {
+            this.disableCacheOptimisation = disableCacheOptimisation;
+            return this;
+        }
+
         public Options build() {
             Options options = new Options();
             if (caseFormatConverter != null) {
-                options.setCaseFormatConverter(caseFormatConverter);
+                options.caseFormatConverter = caseFormatConverter;
             }
-            options.setEnableParameterCapture(enableParameterCapture);
+            options.enableParameterCapture = enableParameterCapture;
+            options.disableCacheOptimisation = disableCacheOptimisation;
             return options;
         }
     }

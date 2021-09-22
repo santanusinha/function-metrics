@@ -79,3 +79,5 @@ buildNumber.properties
 
 ### Maven template
 .mvn/timing.properties
+ajcore.*
+out.*

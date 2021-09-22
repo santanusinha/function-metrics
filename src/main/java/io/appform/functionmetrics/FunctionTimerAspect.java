@@ -20,32 +20,36 @@ import com.codahale.metrics.Timer;
 import com.google.common.base.Joiner;
 import com.google.common.base.Stopwatch;
 import com.google.common.base.Strings;
+import lombok.extern.slf4j.Slf4j;
+import lombok.val;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.Signature;
 import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
 import org.aspectj.lang.annotation.Pointcut;
 import org.aspectj.lang.reflect.MethodSignature;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.util.Comparator;
-import java.util.List;
+import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 import static io.appform.functionmetrics.FunctionMetricConstants.METRIC_DELIMITER;
 import static io.appform.functionmetrics.FunctionMetricConstants.VALID_PARAM_VALUE_PATTERN;
+import static io.appform.functionmetrics.FunctionMetricsManager.timer;
 
 /**
  * This aspect ensures that only methods annotated with {@link MonitoredFunction} are measured.
  */
 @Aspect
+@Slf4j
 @SuppressWarnings("unused")
 public class FunctionTimerAspect {
-    private static final Logger log = LoggerFactory.getLogger(FunctionTimerAspect.class.getSimpleName());
+    private final Map<String, FunctionInvocation> paramCache = new ConcurrentHashMap<>();
 
     @Pointcut("@annotation(io.appform.functionmetrics.MonitoredFunction)")
     public void monitoredFunctionCalled() {
@@ -59,76 +63,98 @@ public class FunctionTimerAspect {
 
     @Around("monitoredFunctionCalled() && anyFunctionCalled()")
     public Object around(ProceedingJoinPoint joinPoint) throws Throwable {
-        final Signature callSignature = joinPoint.getSignature();
-        final MethodSignature methodSignature = MethodSignature.class.cast(callSignature);
-        MonitoredFunction monitoredFunction = methodSignature.getMethod().getAnnotation(MonitoredFunction.class);
-        final String className = Strings.isNullOrEmpty(monitoredFunction.className())
-                                    ? callSignature.getDeclaringType().getSimpleName()
-                                    : monitoredFunction.className();
-        final String methodName = Strings.isNullOrEmpty(monitoredFunction.method())
-                                    ? callSignature.getName()
-                                    : monitoredFunction.method();
-        final Options options = FunctionMetricsManager.getOptions();
+        val callSignature = joinPoint.getSignature();
 
-        String parameterString = "";
-        if (options != null
-                && options.isEnableParameterCapture()) {
-            boolean valid = true;
-            if (methodSignature.getMethod().getParameterCount() != joinPoint.getArgs().length) {
-                log.warn("Unusual scenario - number of parameters in method signature doesn't match with args supplied in " +
-                        "runtime, so skipping parameter capture altogether in metric name for this invocation " +
-                        "[class = {}, method = {}]", className, methodName);
-                valid = false;
-            }
-            if (valid) {
-                final List<String> paramValues
-                        = IntStream.range(0, methodSignature.getMethod().getParameterCount())
-                        .mapToObj(i -> {
-                            MetricTerm metricTerm = methodSignature.getMethod()
-                                    .getParameters()[i].getAnnotation(MetricTerm.class);
-                            if (metricTerm == null) {
-                                return null;
-                            }
-                            String paramValueStr = convertToString(joinPoint.getArgs()[i]).trim();
-                            boolean matches = VALID_PARAM_VALUE_PATTERN.matcher(paramValueStr).matches();
-                            String sanitizedParamValue = matches ?
-                                    options.getCaseFormatConverter().convert(paramValueStr) : "";
-                            return new Pair<>(metricTerm.order(), sanitizedParamValue);
-                        })
-                        .filter(Objects::nonNull) // filter parameters that are not metric terms
-                        .sorted(Comparator.comparingInt(Pair::getKey)) // sort metric terms by order attribute
-                        .map(Pair::getValue) // extract parameter value
-                        .collect(Collectors.toList());
-                // if and only if after all transformations none of the parameter values are null or
-                // empty will we add the parameter string to the metric name
-                if (paramValues
-                        .stream()
-                        .noneMatch(Strings::isNullOrEmpty)) {
-                    parameterString = Joiner.on(METRIC_DELIMITER).join(paramValues);
-                }
-            }
-        }
+        val invocation = cacheDisabled()
+                         ? createFunctionInvocation(joinPoint, callSignature)
+                         : paramCache.computeIfAbsent(callSignature.toLongString(),
+                                                      key -> createFunctionInvocation(joinPoint, callSignature));
 
-        log.trace("Called for class: {} method: {} parameterString: {}", className, methodName, parameterString);
-        final FunctionInvocation invocation = new FunctionInvocation(className, methodName, parameterString);
-        Stopwatch stopwatch = Stopwatch.createStarted();
+        val stopwatch = Stopwatch.createStarted();
         try {
-            Object response = joinPoint.proceed();
+            val response = joinPoint.proceed();
             stopwatch.stop();
-            FunctionMetricsManager.timer(TimerDomain.SUCCESS, invocation)
-                    .ifPresent(timer -> updateTimer(timer, stopwatch));
+            timer(TimerDomain.SUCCESS, invocation).ifPresent(timer -> updateTimer(timer, stopwatch));
             return response;
         }
         catch (Throwable t) {
             stopwatch.stop();
-            FunctionMetricsManager.timer(TimerDomain.FAILURE, invocation)
-                    .ifPresent(timer -> updateTimer(timer, stopwatch));
+            timer(TimerDomain.FAILURE, invocation).ifPresent(timer -> updateTimer(timer, stopwatch));
             throw t;
         }
         finally {
-            FunctionMetricsManager.timer(TimerDomain.ALL, invocation)
-                    .ifPresent(timer -> updateTimer(timer, stopwatch));
+            timer(TimerDomain.ALL, invocation).ifPresent(timer -> updateTimer(timer, stopwatch));
         }
+    }
+
+    private boolean cacheDisabled() {
+        return FunctionMetricsManager.getOptions().map(Options::isDisableCacheOptimisation).orElse(false);
+    }
+
+    private FunctionInvocation createFunctionInvocation(ProceedingJoinPoint joinPoint, Signature callSignature) {
+        val methodSignature = (MethodSignature) callSignature;
+        val monitoredFunction = methodSignature.getMethod().getAnnotation(MonitoredFunction.class);
+        val className = Strings.isNullOrEmpty(monitoredFunction.className())
+                        ? callSignature.getDeclaringType().getSimpleName()
+                        : monitoredFunction.className();
+        val methodName = Strings.isNullOrEmpty(monitoredFunction.method())
+                         ? callSignature.getName()
+                         : monitoredFunction.method();
+        val options = FunctionMetricsManager.getOptions().orElse(null);
+
+        val parameterString = createParamString(className, methodName, joinPoint, methodSignature, options)
+                .orElse("");
+
+        log.trace("Called for class: {} method: {} parameterString: {}", className, methodName, parameterString);
+        return new FunctionInvocation(className, methodName, parameterString);
+    }
+
+    private Optional<String> createParamString(
+            String className,
+            String methodName,
+            ProceedingJoinPoint joinPoint,
+            MethodSignature methodSignature,
+            Options options) {
+        if (options != null && options.isEnableParameterCapture()) {
+            if (methodSignature.getMethod().getParameterCount() != joinPoint.getArgs().length) {
+                log.warn(
+                        "Unusual scenario - number of parameters in method signature doesn't match with args supplied in " +
+                                "runtime, so skipping parameter capture altogether in metric name for this invocation " +
+                                "[class = {}, method = {}]",
+                        className,
+                        methodName);
+                return Optional.empty();
+            }
+        }
+        else {
+            return Optional.empty();
+        }
+        val paramValues
+                = IntStream.range(0, methodSignature.getMethod().getParameterCount())
+                .mapToObj(i -> {
+                    val metricTerm = methodSignature.getMethod()
+                            .getParameters()[i].getAnnotation(MetricTerm.class);
+                    if (metricTerm == null) {
+                        return null;
+                    }
+                    val paramValueStr = convertToString(joinPoint.getArgs()[i]).trim();
+                    val sanitizedParamValue = VALID_PARAM_VALUE_PATTERN.matcher(paramValueStr).matches()
+                                              ? options.getCaseFormatConverter().convert(paramValueStr)
+                                              : "";
+                    return new Pair<>(metricTerm.order(), sanitizedParamValue);
+                })
+                .filter(Objects::nonNull) // filter parameters that are not metric terms
+                .sorted(Comparator.comparingInt(Pair::getKey)) // sort metric terms by order attribute
+                .map(Pair::getValue) // extract parameter value
+                .collect(Collectors.toList());
+        // if and only if after all transformations none of the parameter values are null or
+        // empty will we add the parameter string to the metric name
+        if (paramValues
+                .stream()
+                .noneMatch(Strings::isNullOrEmpty)) {
+            return Optional.of(Joiner.on(METRIC_DELIMITER).join(paramValues));
+        }
+        return Optional.empty();
     }
 
     private void updateTimer(Timer timer, Stopwatch stopwatch) {
@@ -141,8 +167,9 @@ public class FunctionTimerAspect {
         }
         if (obj instanceof String) {
             return (String) obj;
-        } else if (obj instanceof Enum) {
-            return ((Enum) obj).name();
+        }
+        else if (obj instanceof Enum) {
+            return ((Enum<?>) obj).name();
         }
         return "";
     }

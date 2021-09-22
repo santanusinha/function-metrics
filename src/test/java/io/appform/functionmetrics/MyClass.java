@@ -46,6 +46,11 @@ public class MyClass {
         System.out.println(String.format("x = %s, y = %d", x, y));
     }
 
+    @MonitoredFunction()
+    public void parameterInvalidFunction(@MetricTerm int x, @MetricTerm int y) {
+        System.out.println(String.format("x = %d, y = %d", x, y));
+    }
+
     @MonitoredFunction(method = "parameterInvalidVarArgsFunction")
     public void parameterInvalidFunction(@MetricTerm String x, @MetricTerm String... y) {
         System.out.println(String.format("x = %s, y = [%s]", x, Joiner.on(",").join(y)));
@@ -63,4 +68,16 @@ public class MyClass {
     public void nonTimedFunction() {
         System.out.println("Blah Blah");
     }
+
+    @MonitoredFunction
+    public void overLoadF(int x, int y) {
+        System.out.println(String.format("X = %d Y = %d", x,y));
+    }
+
+    @MonitoredFunction
+    public void overLoadF(int x, String y) {
+        System.out.println(String.format("X = %d Y = %s", x, y));
+    }
+
+    void perfFunction() {}
 }
