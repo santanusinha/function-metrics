@@ -6,7 +6,7 @@
 
     <groupId>io.appform.functionmetrics</groupId>
     <artifactId>function-metrics</artifactId>
-    <version>1.0.8</version>
+    <version>1.0.9</version>
     <name>Function Metrics</name>
     <url>https://github.com/santanusinha/function-metrics</url>
     <description>Annotation based function level metrics</description>
@@ -100,11 +100,6 @@
             <groupId>org.slf4j</groupId>
             <artifactId>slf4j-api</artifactId>
             <version>1.7.25</version>
-        </dependency>
-        <dependency>
-            <groupId>com.github.ben-manes.caffeine</groupId>
-            <artifactId>caffeine</artifactId>
-            <version>3.0.4</version>
         </dependency>
         <dependency>
             <groupId>junit</groupId>
