@@ -20,19 +20,16 @@ import com.codahale.metrics.Timer;
 import com.google.common.base.Joiner;
 import com.google.common.base.Stopwatch;
 import com.google.common.base.Strings;
-import lombok.extern.slf4j.Slf4j;
-import lombok.val;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.Signature;
 import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
 import org.aspectj.lang.annotation.Pointcut;
 import org.aspectj.lang.reflect.MethodSignature;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import java.util.Comparator;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Optional;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
@@ -46,9 +43,10 @@ import static io.appform.functionmetrics.FunctionMetricsManager.timer;
  * This aspect ensures that only methods annotated with {@link MonitoredFunction} are measured.
  */
 @Aspect
-@Slf4j
 @SuppressWarnings("unused")
 public class FunctionTimerAspect {
+    private static final Logger log = LoggerFactory.getLogger(FunctionTimerAspect.class.getSimpleName());
+
     private final Map<String, FunctionInvocation> paramCache = new ConcurrentHashMap<>();
 
     @Pointcut("@annotation(io.appform.functionmetrics.MonitoredFunction)")
@@ -63,16 +61,16 @@ public class FunctionTimerAspect {
 
     @Around("monitoredFunctionCalled() && anyFunctionCalled()")
     public Object around(ProceedingJoinPoint joinPoint) throws Throwable {
-        val callSignature = joinPoint.getSignature();
+        final Signature callSignature = joinPoint.getSignature();
 
-        val invocation = cacheDisabled()
+        final FunctionInvocation invocation = cacheDisabled()
                          ? createFunctionInvocation(joinPoint, callSignature)
                          : paramCache.computeIfAbsent(callSignature.toLongString(),
                                                       key -> createFunctionInvocation(joinPoint, callSignature));
 
-        val stopwatch = Stopwatch.createStarted();
+        final Stopwatch stopwatch = Stopwatch.createStarted();
         try {
-            val response = joinPoint.proceed();
+            final Object response = joinPoint.proceed();
             stopwatch.stop();
             timer(TimerDomain.SUCCESS, invocation).ifPresent(timer -> updateTimer(timer, stopwatch));
             return response;
@@ -92,17 +90,17 @@ public class FunctionTimerAspect {
     }
 
     private FunctionInvocation createFunctionInvocation(ProceedingJoinPoint joinPoint, Signature callSignature) {
-        val methodSignature = (MethodSignature) callSignature;
-        val monitoredFunction = methodSignature.getMethod().getAnnotation(MonitoredFunction.class);
-        val className = Strings.isNullOrEmpty(monitoredFunction.className())
-                        ? callSignature.getDeclaringType().getSimpleName()
-                        : monitoredFunction.className();
-        val methodName = Strings.isNullOrEmpty(monitoredFunction.method())
-                         ? callSignature.getName()
-                         : monitoredFunction.method();
-        val options = FunctionMetricsManager.getOptions().orElse(null);
+        final MethodSignature methodSignature = (MethodSignature) callSignature;
+        final MonitoredFunction monitoredFunction = methodSignature.getMethod().getAnnotation(MonitoredFunction.class);
+        final String className = Strings.isNullOrEmpty(monitoredFunction.className())
+                           ? callSignature.getDeclaringType().getSimpleName()
+                           : monitoredFunction.className();
+        final String methodName = Strings.isNullOrEmpty(monitoredFunction.method())
+                            ? callSignature.getName()
+                            : monitoredFunction.method();
+        final Options options = FunctionMetricsManager.getOptions().orElse(null);
 
-        val parameterString = createParamString(className, methodName, joinPoint, methodSignature, options)
+        final String parameterString = createParamString(className, methodName, joinPoint, methodSignature, options)
                 .orElse("");
 
         log.trace("Called for class: {} method: {} parameterString: {}", className, methodName, parameterString);
@@ -129,16 +127,15 @@ public class FunctionTimerAspect {
         else {
             return Optional.empty();
         }
-        val paramValues
-                = IntStream.range(0, methodSignature.getMethod().getParameterCount())
+        final List<String> paramValues = IntStream.range(0, methodSignature.getMethod().getParameterCount())
                 .mapToObj(i -> {
-                    val metricTerm = methodSignature.getMethod()
+                    final MetricTerm metricTerm = methodSignature.getMethod()
                             .getParameters()[i].getAnnotation(MetricTerm.class);
                     if (metricTerm == null) {
                         return null;
                     }
-                    val paramValueStr = convertToString(joinPoint.getArgs()[i]).trim();
-                    val sanitizedParamValue = VALID_PARAM_VALUE_PATTERN.matcher(paramValueStr).matches()
+                    final String paramValueStr = convertToString(joinPoint.getArgs()[i]).trim();
+                    final String sanitizedParamValue = VALID_PARAM_VALUE_PATTERN.matcher(paramValueStr).matches()
                                               ? options.getCaseFormatConverter().convert(paramValueStr)
                                               : "";
                     return new Pair<>(metricTerm.order(), sanitizedParamValue);

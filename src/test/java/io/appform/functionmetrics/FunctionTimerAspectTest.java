@@ -21,7 +21,6 @@ import com.codahale.metrics.SharedMetricRegistries;
 import com.codahale.metrics.Timer;
 import com.google.common.base.CaseFormat;
 import com.google.common.base.Stopwatch;
-import lombok.SneakyThrows;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -186,7 +185,6 @@ public class FunctionTimerAspectTest {
     }
 
     @Test
-    @SneakyThrows
     public void testCachingMT() {
         final double avgTime = runMTTest();
         System.out.println("Time taken for MT test: " + avgTime);

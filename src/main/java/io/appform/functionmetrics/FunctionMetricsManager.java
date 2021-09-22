@@ -20,7 +20,8 @@ import com.codahale.metrics.MetricRegistry;
 import com.codahale.metrics.SlidingTimeWindowArrayReservoir;
 import com.codahale.metrics.Timer;
 import com.google.common.base.Strings;
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
@@ -28,8 +29,9 @@ import java.util.concurrent.TimeUnit;
 /**
  * Global metrics manager that needs to be initialized at start
  */
-@Slf4j
 public class FunctionMetricsManager {
+    private static final Logger log = LoggerFactory.getLogger(FunctionMetricsManager.class.getSimpleName());
+
     private static MetricRegistry registry;
     private static String prefix;
     private static Options options;

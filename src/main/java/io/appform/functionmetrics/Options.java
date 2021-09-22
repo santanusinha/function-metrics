@@ -18,14 +18,23 @@ package io.appform.functionmetrics;
 
 import com.google.common.base.CaseFormat;
 import com.google.common.base.Converter;
-import lombok.Getter;
-
-@Getter
 
 public class Options {
     private boolean enableParameterCapture;
     private Converter<String, String> caseFormatConverter = CaseFormat.LOWER_CAMEL.converterTo(CaseFormat.LOWER_CAMEL);
     private boolean disableCacheOptimisation;
+
+    public boolean isEnableParameterCapture() {
+        return enableParameterCapture;
+    }
+
+    public Converter<String, String> getCaseFormatConverter() {
+        return caseFormatConverter;
+    }
+
+    public boolean isDisableCacheOptimisation() {
+        return disableCacheOptimisation;
+    }
 
     public static class OptionsBuilder {
         private boolean enableParameterCapture;

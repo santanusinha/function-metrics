@@ -16,14 +16,30 @@
 
 package io.appform.functionmetrics;
 
-import lombok.Value;
-
 /**
  *
  */
-@Value
 public class FunctionInvocation {
-    String className;
-    String methodName;
-    String parameterString;
+    private final String className;
+    private final String methodName;
+    private final String parameterString;
+
+    public FunctionInvocation(String className, String methodName, String parameterString) {
+        this.className = className;
+        this.methodName = methodName;
+        this.parameterString = parameterString;
+    }
+
+    public String getClassName() {
+        return className;
+    }
+
+    public String getMethodName() {
+        return methodName;
+    }
+
+    public String getParameterString() {
+        return parameterString;
+    }
 }
+

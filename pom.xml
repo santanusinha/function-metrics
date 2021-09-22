@@ -6,7 +6,7 @@
 
     <groupId>io.appform.functionmetrics</groupId>
     <artifactId>function-metrics</artifactId>
-    <version>1.0.7</version>
+    <version>1.0.8</version>
     <name>Function Metrics</name>
     <url>https://github.com/santanusinha/function-metrics</url>
     <description>Annotation based function level metrics</description>
@@ -71,16 +71,9 @@
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <aspectj.version>1.8.13</aspectj.version>
-        <lombok.version>1.18.20</lombok.version>
     </properties>
 
     <dependencies>
-        <dependency>
-            <groupId>org.projectlombok</groupId>
-            <artifactId>lombok</artifactId>
-            <version>${lombok.version}</version>
-            <scope>provided</scope>
-        </dependency>
         <dependency>
             <groupId>org.aspectj</groupId>
             <artifactId>aspectjrt</artifactId>
@@ -141,38 +134,19 @@
                 <groupId>org.codehaus.mojo</groupId>
                 <artifactId>aspectj-maven-plugin</artifactId>
                 <version>1.11</version>
-                <dependencies>
-                    <dependency>
-                        <groupId>org.aspectj</groupId>
-                        <artifactId>aspectjrt</artifactId>
-                        <version>${aspectj.version}</version>
-                    </dependency>
-                    <dependency>
-                        <groupId>org.aspectj</groupId>
-                        <artifactId>aspectjtools</artifactId>
-                        <version>${aspectj.version}</version>
-                    </dependency>
-                </dependencies>
-
                 <configuration>
                     <complianceLevel>1.8</complianceLevel>
                     <source>1.8</source>
                     <target>1.8</target>
                     <showWeaveInfo>true</showWeaveInfo>
                     <verbose>true</verbose>
-                    <Xreweavable>false</Xreweavable>
-                    <sources/>
-                    <weaveDirectories>
-                        <weaveDirectory>${project.build.directory}/classes</weaveDirectory>
-                        <weaveDirectory>${project.build.directory}/test-classes</weaveDirectory>
-                    </weaveDirectories>
-                    <verbose>true</verbose>
                     <Xlint>ignore</Xlint>
+                    <encoding>UTF-8 </encoding>
                 </configuration>
                 <executions>
                     <execution>
-<!--                        <phase>process-classes</phase>-->
                         <goals>
+                            <goal>compile</goal>
                             <goal>test-compile</goal>
                         </goals>
                     </execution>
