@@ -17,12 +17,14 @@
 package io.appform.functionmetrics;
 
 import com.codahale.metrics.MetricRegistry;
+import com.codahale.metrics.SlidingTimeWindowArrayReservoir;
 import com.codahale.metrics.Timer;
 import com.google.common.base.Strings;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.Optional;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Global metrics manager that needs to be initialized at start
@@ -56,6 +58,7 @@ public class FunctionMetricsManager {
             log.warn("Please call FunctionalMetricsManager.initialize() to setup metrics collection. No metrics will be pushed.");
             return Optional.empty();
         }
+        MetricRegistry.MetricSupplier<Timer> metricSupplier = () -> new Timer(new SlidingTimeWindowArrayReservoir(60, TimeUnit.SECONDS));
         if (!Strings.isNullOrEmpty(invocation.getParameterString()) && options.isEnableParameterCapture()) {
             return Optional.of(registry.timer(
                     String.format("%s.%s.%s.%s.%s",
@@ -63,14 +66,16 @@ public class FunctionMetricsManager {
                             invocation.getClassName(),
                             invocation.getMethodName(),
                             invocation.getParameterString(),
-                            domain.getValue())));
+                            domain.getValue()),
+                    metricSupplier));
         } else {
             return Optional.of(registry.timer(
                     String.format("%s.%s.%s.%s",
                             prefix,
                             invocation.getClassName(),
                             invocation.getMethodName(),
-                            domain.getValue())));
+                            domain.getValue()),
+                    metricSupplier));
         }
     }
 }
