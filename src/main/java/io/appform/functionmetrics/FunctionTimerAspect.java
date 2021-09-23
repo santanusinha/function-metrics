@@ -105,7 +105,6 @@ public class FunctionTimerAspect {
     private FunctionInvocation createFunctionInvocation(
             final MethodData methodData, final ProceedingJoinPoint joinPoint, final Signature callSignature) {
         final MethodSignature methodSignature = (MethodSignature) callSignature;
-        final MonitoredFunction monitoredFunction = methodSignature.getMethod().getAnnotation(MonitoredFunction.class);
         final Options options = FunctionMetricsManager.getOptions().orElse(null);
 
         final String className = methodData.getClassName();
