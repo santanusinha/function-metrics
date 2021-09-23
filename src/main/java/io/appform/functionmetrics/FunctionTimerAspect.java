@@ -47,7 +47,7 @@ import static io.appform.functionmetrics.FunctionMetricsManager.timer;
 public class FunctionTimerAspect {
     private static final Logger log = LoggerFactory.getLogger(FunctionTimerAspect.class.getSimpleName());
 
-    private final Map<String, FunctionInvocation> paramCache = new ConcurrentHashMap<>();
+    private final Map<String, MethodData> paramCache = new ConcurrentHashMap<>();
 
     @Pointcut("@annotation(io.appform.functionmetrics.MonitoredFunction)")
     public void monitoredFunctionCalled() {
@@ -63,10 +63,11 @@ public class FunctionTimerAspect {
     public Object around(ProceedingJoinPoint joinPoint) throws Throwable {
         final Signature callSignature = joinPoint.getSignature();
 
-        final FunctionInvocation invocation = cacheDisabled()
-                         ? createFunctionInvocation(joinPoint, callSignature)
-                         : paramCache.computeIfAbsent(callSignature.toLongString(),
-                                                      key -> createFunctionInvocation(joinPoint, callSignature));
+        final MethodData methodData = cacheDisabled()
+                                      ? createMethodData(callSignature)
+                                      : paramCache.computeIfAbsent(callSignature.toLongString(),
+                                                                   key -> createMethodData(callSignature));
+        final FunctionInvocation invocation = createFunctionInvocation(methodData, joinPoint, callSignature);
 
         final Stopwatch stopwatch = Stopwatch.createStarted();
         try {
@@ -89,21 +90,31 @@ public class FunctionTimerAspect {
         return FunctionMetricsManager.getOptions().map(Options::isDisableCacheOptimisation).orElse(false);
     }
 
-    private FunctionInvocation createFunctionInvocation(ProceedingJoinPoint joinPoint, Signature callSignature) {
+    private MethodData createMethodData(Signature callSignature) {
         final MethodSignature methodSignature = (MethodSignature) callSignature;
         final MonitoredFunction monitoredFunction = methodSignature.getMethod().getAnnotation(MonitoredFunction.class);
         final String className = Strings.isNullOrEmpty(monitoredFunction.className())
-                           ? callSignature.getDeclaringType().getSimpleName()
-                           : monitoredFunction.className();
+                                 ? callSignature.getDeclaringType().getSimpleName()
+                                 : monitoredFunction.className();
         final String methodName = Strings.isNullOrEmpty(monitoredFunction.method())
-                            ? callSignature.getName()
-                            : monitoredFunction.method();
+                                  ? callSignature.getName()
+                                  : monitoredFunction.method();
+        return new MethodData(className, methodName);
+    }
+
+    private FunctionInvocation createFunctionInvocation(
+            final MethodData methodData, final ProceedingJoinPoint joinPoint, final Signature callSignature) {
+        final MethodSignature methodSignature = (MethodSignature) callSignature;
+        final MonitoredFunction monitoredFunction = methodSignature.getMethod().getAnnotation(MonitoredFunction.class);
         final Options options = FunctionMetricsManager.getOptions().orElse(null);
 
+        final String className = methodData.getClassName();
+        final String methodName = methodData.getMethodName();
         final String parameterString = createParamString(className, methodName, joinPoint, methodSignature, options)
                 .orElse("");
 
-        log.trace("Called for class: {} method: {} parameterString: {}", className, methodName, parameterString);
+        log.trace("Called for class: {} method: {} parameterString: {}",
+                  className, methodName, parameterString);
         return new FunctionInvocation(className, methodName, parameterString);
     }
 
@@ -136,8 +147,8 @@ public class FunctionTimerAspect {
                     }
                     final String paramValueStr = convertToString(joinPoint.getArgs()[i]).trim();
                     final String sanitizedParamValue = VALID_PARAM_VALUE_PATTERN.matcher(paramValueStr).matches()
-                                              ? options.getCaseFormatConverter().convert(paramValueStr)
-                                              : "";
+                                                       ? options.getCaseFormatConverter().convert(paramValueStr)
+                                                       : "";
                     return new Pair<>(metricTerm.order(), sanitizedParamValue);
                 })
                 .filter(Objects::nonNull) // filter parameters that are not metric terms

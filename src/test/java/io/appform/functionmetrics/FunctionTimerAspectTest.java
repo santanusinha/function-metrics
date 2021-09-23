@@ -186,13 +186,21 @@ public class FunctionTimerAspectTest {
 
     @Test
     public void testCachingMT() {
+        FunctionMetricsManager.initialize(
+                "phonepe.test",
+                registry,
+                new Options.OptionsBuilder()
+                        .enableParameterCapture(false)
+                        .caseFormatConverter(CaseFormat.LOWER_UNDERSCORE.converterTo(CaseFormat.LOWER_CAMEL))
+                        .disableCacheOptimisation(false)
+                        .build());
         final double avgTime = runMTTest();
         System.out.println("Time taken for MT test: " + avgTime);
         FunctionMetricsManager.initialize(
                 "phonepe.test",
                 registry,
                 new Options.OptionsBuilder()
-                        .enableParameterCapture(true)
+                        .enableParameterCapture(false)
                         .caseFormatConverter(CaseFormat.LOWER_UNDERSCORE.converterTo(CaseFormat.LOWER_CAMEL))
                         .disableCacheOptimisation()
                         .build());
