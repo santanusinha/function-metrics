@@ -7,7 +7,7 @@ This simple library provides a way to annotate your functions and get success, f
 * _Dropwizard Metrics (Formerly called Yammer Metrics) -_ 3.2.2+
 * _Guava -_ 21.0+
 
-## Usage
+## Usage for Java 8
 To use this library the following need to be added to your Maven pom file.
 
 ### Dependency
@@ -22,7 +22,7 @@ Put this into the `dependencies` section of your pom file:
     <dependency>
         <groupId>io.appform.functionmetrics</groupId>
         <artifactId>function-metrics</artifactId>
-        <version>1.0.9</version>
+        <version>1.0.10</version>
     </dependency>
 ```
 
@@ -31,12 +31,12 @@ If you are not using guava and metrics already, then add the following as well:
     <dependency>
         <groupId>io.dropwizard.metrics</groupId>
         <artifactId>metrics-core</artifactId>
-        <version>3.2.2</version>
+        <version>1.9.7</version>
     </dependency>
     <dependency>
         <groupId>com.google.guava</groupId>
         <artifactId>guava</artifactId>
-        <version>28.0-jre</version>
+        <version>30.1.1-jre</version>
     </dependency>
 ```
 
@@ -90,6 +90,95 @@ Therefore, configuration needs to be put into your pom file in the `build/plugin
                         </execution>
                     </executions>
                 </plugin>
+```
+
+_NOTE: This config uses in-place weaving of the compiled classes.
+Weaving can also be done during compilation, however in this mode libraries like Lombok etc will stop working._
+
+## Usage for Java 11
+To use this library the following need to be added to your Maven pom file.
+
+### Dependency
+Put this into the `dependencies` section of your pom file:
+
+```
+        <dependency>
+            <groupId>io.appform.functionmetrics</groupId>
+            <artifactId>function-metrics</artifactId>
+            <version>1.0.10</version>
+        </dependency>
+        <dependency>
+            <groupId>org.aspectj</groupId>
+            <artifactId>aspectjrt</artifactId>
+            <version>1.9.7</version>
+        </dependency>
+```
+
+If you are not using guava and metrics already, then add the following as well:
+```
+    <dependency>
+        <groupId>io.dropwizard.metrics</groupId>
+        <artifactId>metrics-core</artifactId>
+        <version>4.2.5</version>
+    </dependency>
+    <dependency>
+        <groupId>com.google.guava</groupId>
+        <artifactId>guava</artifactId>
+        <version>30.1.1-jre</version>
+    </dependency>
+```
+
+### Build plugin
+This library uses an aspect to introspect and instrument your code during compile time to inject metrics collection code.
+Therefore, configuration needs to be put into your pom file in the `build/plugins` section to enabje aspectj weaving.
+
+```
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>aspectj-maven-plugin</artifactId>
+                <version>1.14.0</version>
+                <dependencies>
+                    <dependency>
+                        <groupId>org.aspectj</groupId>
+                        <artifactId>aspectjrt</artifactId>
+                        <version>1.9.7</version>
+                    </dependency>
+                    <dependency>
+                        <groupId>org.aspectj</groupId>
+                        <artifactId>aspectjtools</artifactId>
+                        <version>1.9.7</version>
+                    </dependency>
+                </dependencies>
+
+                <configuration>
+                    <complianceLevel>11</complianceLevel>
+                    <source>11</source>
+                    <target>11</target>
+                    <showWeaveInfo>true</showWeaveInfo>
+                    <forceAjcCompile>true</forceAjcCompile>
+                    <sources/>
+                    <weaveDirectories>
+                        <weaveDirectory>${project.build.directory}/classes</weaveDirectory>
+                    </weaveDirectories>
+                    <verbose>true</verbose>
+                    <Xlint>ignore</Xlint>
+                    <aspectLibraries>
+                        <aspectLibrary>
+                            <groupId>io.appform.functionmetrics</groupId>
+                            <artifactId>function-metrics</artifactId>
+                        </aspectLibrary>
+                    </aspectLibraries>
+                </configuration>
+                <executions>
+                    <execution>
+                        <phase>process-classes</phase>
+                        <goals>
+                            <goal>compile</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+
 ```
 
 _NOTE: This config uses in-place weaving of the compiled classes.
@@ -272,4 +361,4 @@ _**NOTE:** This is output from Dropwizard metrics console reporter._
 Apache 2
 
 ## Version
-1.0.1
+1.0.10
