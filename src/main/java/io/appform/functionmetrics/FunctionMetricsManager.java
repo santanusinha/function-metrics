@@ -47,7 +47,7 @@ public class FunctionMetricsManager {
     }
 
     public static void initialize(final String packageName, final MetricRegistry registry, final Options options) {
-        log.info("Functional Metric prefix: {}", packageName);
+        log.info("Function Metrics prefix: {}", packageName);
         FunctionMetricsManager.registry = registry;
         FunctionMetricsManager.prefix = packageName;
         FunctionMetricsManager.options = options;
@@ -55,7 +55,7 @@ public class FunctionMetricsManager {
 
     public static Optional<Timer> timer(final TimerDomain domain, final FunctionInvocation invocation) {
         if(null == registry) {
-            log.warn("Please call FunctionalMetricsManager.initialize() to setup metrics collection. No metrics will be pushed.");
+            log.warn("Please call FunctionMetricsManager.initialize() to setup metrics collection. No metrics will be pushed.");
             return Optional.empty();
         }
         MetricRegistry.MetricSupplier<Timer> metricSupplier = () -> new Timer(new SlidingTimeWindowArrayReservoir(60, TimeUnit.SECONDS));

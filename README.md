@@ -17,12 +17,12 @@ Put this into the `dependencies` section of your pom file:
     <dependency>
         <groupId>org.aspectj</groupId>
         <artifactId>aspectjrt</artifactId>
-        <version>1.8.13</version>
+        <version>1.9.7</version>
     </dependency>
     <dependency>
         <groupId>io.appform.functionmetrics</groupId>
         <artifactId>function-metrics</artifactId>
-        <version>1.0.10</version>
+        <version>1.0.11</version>
     </dependency>
 ```
 
@@ -36,7 +36,7 @@ If you are not using guava and metrics already, then add the following as well:
     <dependency>
         <groupId>com.google.guava</groupId>
         <artifactId>guava</artifactId>
-        <version>30.1.1-jre</version>
+        <version>31.0.1-jre</version>
     </dependency>
 ```
 
@@ -48,17 +48,17 @@ Therefore, configuration needs to be put into your pom file in the `build/plugin
                 <plugin>
                     <groupId>org.codehaus.mojo</groupId>
                     <artifactId>aspectj-maven-plugin</artifactId>
-                    <version>1.11</version>
+                    <version>1.14.0</version>
                     <dependencies>
                         <dependency>
                             <groupId>org.aspectj</groupId>
                             <artifactId>aspectjrt</artifactId>
-                            <version>1.8.13</version>
+                            <version>1.9.7</version>
                         </dependency>
                         <dependency>
                             <groupId>org.aspectj</groupId>
                             <artifactId>aspectjtools</artifactId>
-                            <version>1.8.13</version>
+                            <version>1.9.7</version>
                         </dependency>
                     </dependencies>
 
@@ -105,7 +105,7 @@ Put this into the `dependencies` section of your pom file:
         <dependency>
             <groupId>io.appform.functionmetrics</groupId>
             <artifactId>function-metrics</artifactId>
-            <version>1.0.10</version>
+            <version>1.0.11</version>
         </dependency>
         <dependency>
             <groupId>org.aspectj</groupId>
@@ -124,7 +124,7 @@ If you are not using guava and metrics already, then add the following as well:
     <dependency>
         <groupId>com.google.guava</groupId>
         <artifactId>guava</artifactId>
-        <version>30.1.1-jre</version>
+        <version>31.0.1-jre</version>
     </dependency>
 ```
 
@@ -361,4 +361,4 @@ _**NOTE:** This is output from Dropwizard metrics console reporter._
 Apache 2
 
 ## Version
-1.0.10
+1.0.11
