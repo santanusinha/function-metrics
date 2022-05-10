@@ -41,8 +41,7 @@ public class FunctionMetricsManager {
         return Optional.ofNullable(options);
     }
 
-    private FunctionMetricsManager() {
-    }
+    private FunctionMetricsManager() {}
 
     public static void initialize(final String packageName, final MetricRegistry registry) {
         initialize(packageName, registry, new Options());
@@ -56,7 +55,7 @@ public class FunctionMetricsManager {
     }
 
     public static Optional<Timer> timer(final TimerDomain domain, final FunctionInvocation invocation) {
-        if (null == registry) {
+        if(null == registry) {
             log.warn("Please call FunctionMetricsManager.initialize() to setup metrics collection. No metrics will be pushed.");
             return Optional.empty();
         }
@@ -67,5 +66,4 @@ public class FunctionMetricsManager {
                 : prefix + "." + invocation.getClassName() + "." + invocation.getMethodName() + "." + domain.getValue();
         return Optional.of(registry.timer(metricName, metricSupplier));
     }
-
 }
