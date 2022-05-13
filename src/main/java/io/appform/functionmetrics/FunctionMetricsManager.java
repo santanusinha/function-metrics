@@ -59,24 +59,10 @@ public class FunctionMetricsManager {
             return Optional.empty();
         }
         MetricRegistry.MetricSupplier<Timer> metricSupplier = () -> new Timer(new SlidingTimeWindowArrayReservoir(60, TimeUnit.SECONDS));
-        if (options.isEnableParameterCapture() && !Strings.isNullOrEmpty(invocation.getParameterString())) {
-            return Optional.of(registry.timer(
-                    String.format("%s.%s.%s.%s.%s",
-                            prefix,
-                            invocation.getClassName(),
-                            invocation.getMethodName(),
-                            invocation.getParameterString(),
-                            domain.getValue()),
-                    metricSupplier));
-        }
-        else {
-            return Optional.of(registry.timer(
-                    String.format("%s.%s.%s.%s",
-                            prefix,
-                            invocation.getClassName(),
-                            invocation.getMethodName(),
-                            domain.getValue()),
-                    metricSupplier));
-        }
+
+        String metricName = options.isEnableParameterCapture() && !Strings.isNullOrEmpty(invocation.getParameterString())
+                ? prefix + "." + invocation.getClassName() + "." + invocation.getMethodName() + "." + invocation.getParameterString() + "." + domain.getValue()
+                : prefix + "." + invocation.getClassName() + "." + invocation.getMethodName() + "." + domain.getValue();
+        return Optional.of(registry.timer(metricName, metricSupplier));
     }
 }
