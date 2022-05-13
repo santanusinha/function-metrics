@@ -60,7 +60,7 @@ public class FunctionMetricsManager {
         }
         MetricRegistry.MetricSupplier<Timer> metricSupplier = () -> new Timer(new SlidingTimeWindowArrayReservoir(60, TimeUnit.SECONDS));
 
-        String metricName = options.isEnableParameterCapture() && !Strings.isNullOrEmpty(invocation.getParameterString())
+        final String metricName = options.isEnableParameterCapture() && !Strings.isNullOrEmpty(invocation.getParameterString())
                 ? prefix + "." + invocation.getClassName() + "." + invocation.getMethodName() + "." + invocation.getParameterString() + "." + domain.getValue()
                 : prefix + "." + invocation.getClassName() + "." + invocation.getMethodName() + "." + domain.getValue();
         return Optional.of(registry.timer(metricName, metricSupplier));
