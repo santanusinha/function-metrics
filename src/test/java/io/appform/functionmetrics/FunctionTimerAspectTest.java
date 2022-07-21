@@ -115,7 +115,7 @@ public class FunctionTimerAspectTest {
     }
 
     @Test
-    public void testMetricsCollectionParameterValid_NoArgs() throws Exception {
+    public void testMetricsCollectionParameterValidNoArgs() throws Exception {
         final MyClass myClass = new MyClass();
         myClass.parameterValidFunction();
 
@@ -149,7 +149,7 @@ public class FunctionTimerAspectTest {
     }
 
     @Test
-    public void testMetricsCollectionParameterInvalid_VarArgs() throws Exception {
+    public void testMetricsCollectionParameterInvalidVarArgs() throws Exception {
         final MyClass myClass = new MyClass();
         myClass.parameterInvalidFunction("a", "b", "c", "d");
 

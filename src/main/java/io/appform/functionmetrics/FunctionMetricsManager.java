@@ -30,7 +30,7 @@ import java.util.concurrent.TimeUnit;
  * Global metrics manager that needs to be initialized at start
  */
 public class FunctionMetricsManager {
-    private static final Logger log = LoggerFactory.getLogger(FunctionMetricsManager.class.getSimpleName());
+    private static final Logger log = LoggerFactory.getLogger(FunctionMetricsManager.class.getName());
 
     private static MetricRegistry registry;
     private static String prefix;
@@ -54,14 +54,15 @@ public class FunctionMetricsManager {
     }
 
     public static Optional<Timer> timer(final TimerDomain domain, final FunctionInvocation invocation) {
-        if(null == registry) {
-            log.warn("Please call FunctionMetricsManager.initialize() to setup metrics collection. No metrics will be pushed.");
+        if (null == registry) {
+            log.info("Please call FunctionMetricsManager.initialize() to setup metrics collection. No metrics will be pushed.");
             return Optional.empty();
         }
         MetricRegistry.MetricSupplier<Timer> metricSupplier = () -> new Timer(new SlidingTimeWindowArrayReservoir(60, TimeUnit.SECONDS));
 
-        final String metricName = options.isEnableParameterCapture() && !Strings.isNullOrEmpty(invocation.getParameterString())
-                ? prefix + "." + invocation.getClassName() + "." + invocation.getMethodName() + "." + invocation.getParameterString() + "." + domain.getValue()
+        final String metricName = options.isEnableParameterCapture()
+                && !Strings.isNullOrEmpty(invocation.getParameterString()) ?
+                prefix + "." + invocation.getClassName() + "." + invocation.getMethodName() + "." + invocation.getParameterString() + "." + domain.getValue()
                 : prefix + "." + invocation.getClassName() + "." + invocation.getMethodName() + "." + domain.getValue();
         return Optional.of(registry.timer(metricName, metricSupplier));
     }

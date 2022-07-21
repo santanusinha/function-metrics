@@ -22,10 +22,12 @@ package io.appform.functionmetrics;
 public class MethodData {
     private final String className;
     private final String methodName;
+    private final boolean parameterCaptureRequired;
 
-    public MethodData(String className, String methodName) {
+    public MethodData(String className, String methodName, boolean parameterInspectionRequired) {
         this.className = className;
         this.methodName = methodName;
+        this.parameterCaptureRequired = parameterInspectionRequired;
     }
 
     public String getClassName() {
@@ -34,5 +36,9 @@ public class MethodData {
 
     public String getMethodName() {
         return methodName;
+    }
+
+    public boolean isParameterCaptureRequired() {
+        return parameterCaptureRequired;
     }
 }
