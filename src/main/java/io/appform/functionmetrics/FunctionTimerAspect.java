@@ -162,13 +162,13 @@ public class FunctionTimerAspect {
     }
 
     private Optional<String> getParamString(final ProceedingJoinPoint joinPoint,
-                                            final List<Integer> paramIndex) {
+                                            final List<Integer> paramPositions) {
         if (!parameterCaptureEnabled()) {
             return Optional.empty();
         }
-        List<String> paramValues = paramIndex
+        List<String> paramValues = paramPositions
                 .stream()
-                .map(index -> getParamValueAtPos(joinPoint, index)) // extract parameter value
+                .map(pos -> getParamValueAtPos(joinPoint, pos)) // extract parameter value
                 .collect(Collectors.toList());
         // if and only if after all transformations none of the parameter values are null or
         // empty will we add the parameter string to the metric name
