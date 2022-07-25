@@ -51,18 +51,21 @@ public class FunctionMetricsManager {
         FunctionMetricsManager.registry = registry;
         FunctionMetricsManager.prefix = packageName;
         FunctionMetricsManager.options = options;
+        if (options.isEnableParameterCapture() && options.isDisableCacheOptimisation()) {
+            log.warn("Enabling caching for method annotations because enableParameterCapture flag is set to true");
+            options.setDisableCacheOptimisation(false);
+        }
     }
 
     public static Optional<Timer> timer(final TimerDomain domain, final FunctionInvocation invocation) {
         if (null == registry) {
-            log.info("Please call FunctionMetricsManager.initialize() to setup metrics collection. No metrics will be pushed.");
+            log.warn("Please call FunctionMetricsManager.initialize() to setup metrics collection. No metrics will be pushed.");
             return Optional.empty();
         }
         MetricRegistry.MetricSupplier<Timer> metricSupplier = () -> new Timer(new SlidingTimeWindowArrayReservoir(60, TimeUnit.SECONDS));
 
-        final String metricName = options.isEnableParameterCapture()
-                && !Strings.isNullOrEmpty(invocation.getParameterString()) ?
-                prefix + "." + invocation.getClassName() + "." + invocation.getMethodName() + "." + invocation.getParameterString() + "." + domain.getValue()
+        final String metricName = options.isEnableParameterCapture() && !Strings.isNullOrEmpty(invocation.getParameterString())
+                ? prefix + "." + invocation.getClassName() + "." + invocation.getMethodName() + "." + invocation.getParameterString() + "." + domain.getValue()
                 : prefix + "." + invocation.getClassName() + "." + invocation.getMethodName() + "." + domain.getValue();
         return Optional.of(registry.timer(metricName, metricSupplier));
     }

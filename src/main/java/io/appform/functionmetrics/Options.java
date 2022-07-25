@@ -36,6 +36,10 @@ public class Options {
         return disableCacheOptimisation;
     }
 
+    public void setDisableCacheOptimisation(boolean disableCacheOptimisation) {
+        this.disableCacheOptimisation = disableCacheOptimisation;
+    }
+
     public static class OptionsBuilder {
         private boolean enableParameterCapture;
         private Converter<String, String> caseFormatConverter;
