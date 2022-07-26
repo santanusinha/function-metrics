@@ -128,15 +128,16 @@ public class FunctionTimerAspect {
 
     private boolean isParamCaptureRequired(final MethodSignature methodSignature) {
         return IntStream.range(0, methodSignature.getMethod().getParameterCount())
-                .anyMatch(i -> {
-                    final MetricTerm metricTerm = methodSignature.getMethod()
-                            .getParameters()[i].getAnnotation(MetricTerm.class);
-                    return metricTerm != null;
-                });
+                .anyMatch(i -> methodSignature.getMethod()
+                        .getParameters()[i].getAnnotation(MetricTerm.class) != null);
     }
 
     private String getParamValueAtPos(final ProceedingJoinPoint joinPoint,
                                       final int pos) {
+        if (pos >= joinPoint.getArgs().length) {
+            log.warn("Unusual scenario: parameter position {} is >= args length {}", pos, joinPoint.getArgs().length);
+            return "";
+        }
         final String paramValueStr = convertToString(joinPoint.getArgs()[pos]).trim();
         return VALID_PARAM_VALUE_PATTERN.matcher(paramValueStr).matches()
                 ? FunctionMetricsManager.getOptions()
@@ -187,9 +188,11 @@ public class FunctionTimerAspect {
     private String convertToString(Object obj) {
         if (obj == null) {
             return "";
-        } else if (obj instanceof String) {
+        }
+        else if (obj instanceof String) {
             return (String) obj;
-        } else if (obj instanceof Enum) {
+        }
+        else if (obj instanceof Enum) {
             return ((Enum<?>) obj).name();
         }
         return "";

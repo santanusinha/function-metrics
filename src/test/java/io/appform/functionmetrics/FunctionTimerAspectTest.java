@@ -225,7 +225,6 @@ public class FunctionTimerAspectTest {
         //This is 20 because params are not identified individually
     }
 
-    @Ignore
     @Test
     public void testCachingMT() {
         FunctionMetricsManager.initialize(
@@ -264,6 +263,7 @@ public class FunctionTimerAspectTest {
         final int numThreads = 10;
         final ExecutorService executorService = Executors.newFixedThreadPool(numThreads);
         final MyClass myClass = new MyClass();
+        System.out.println("Running MT test");
         final List<Future<Long>> futures = IntStream.range(0, numThreads)
                 .mapToObj(i -> executorService.submit(() -> {
                     final Stopwatch stopwatch = Stopwatch.createStarted();
