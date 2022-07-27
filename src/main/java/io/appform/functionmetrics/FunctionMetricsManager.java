@@ -44,26 +44,31 @@ public class FunctionMetricsManager {
         initialize(packageName, registry, options);
     }
 
-    public static synchronized void initialize(final String packageName,
-                                               final MetricRegistry registry,
-                                               final Options options) {
+    public static void initialize(final String packageName,
+                                  final MetricRegistry registry,
+                                  final Options options) {
         if (initialized.get()) {
             log.warn("Function metrics already initialized");
             return;
         }
-        log.info("Function Metrics prefix: {}", packageName);
-        FunctionMetricsManager.registry = registry;
-        FunctionMetricsManager.prefix = packageName;
-        FunctionMetricsManager.options = options;
-        if (options.isEnableParameterCapture() && options.isDisableCacheOptimisation()) {
-            log.warn("Enabling caching for method annotations because enableParameterCapture flag is set to true");
-            options.setDisableCacheOptimisation(false);
+        synchronized (FunctionMetricsManager.class) {
+            if (initialized.get()) {
+                return;
+            }
+            log.info("Function Metrics prefix: {}", packageName);
+            FunctionMetricsManager.registry = registry;
+            FunctionMetricsManager.prefix = packageName;
+            FunctionMetricsManager.options = options;
+            if (options.isEnableParameterCapture() && options.isDisableCacheOptimisation()) {
+                log.warn("Enabling caching for method annotations because enableParameterCapture flag is set to true");
+                options.setDisableCacheOptimisation(false);
+            }
         }
         initialized.set(true);
     }
 
     public static Optional<Timer> timer(final TimerDomain domain, final FunctionInvocation invocation) {
-        if(!initialized.get()) {
+        if(!isInitialized()) {
             log.warn("Please call FunctionMetricsManager.initialize() to setup metrics collection. No metrics will be pushed.");
             return Optional.empty();
         }
