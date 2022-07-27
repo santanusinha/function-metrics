@@ -83,11 +83,11 @@ public class FunctionTimerAspect {
     }
 
     private boolean cacheDisabled() {
-        return FunctionMetricsManager.getOptions().map(Options::isDisableCacheOptimisation).orElse(false);
+        return FunctionMetricsManager.getOptions().isDisableCacheOptimisation();
     }
 
     private boolean parameterCaptureEnabled() {
-        return FunctionMetricsManager.getOptions().map(Options::isEnableParameterCapture).orElse(false);
+        return FunctionMetricsManager.getOptions().isEnableParameterCapture();
     }
 
     private MethodData getMethodData(final ProceedingJoinPoint joinPoint, final Signature callSignature) {
@@ -116,7 +116,7 @@ public class FunctionTimerAspect {
             final ProceedingJoinPoint joinPoint,
             final Signature callSignature) {
         final MethodSignature methodSignature = (MethodSignature) callSignature;
-        final Options options = FunctionMetricsManager.getOptions().orElse(null);
+        final Options options = FunctionMetricsManager.getOptions();
         final String className = methodData.getClassName();
         final String methodName = methodData.getMethodName();
         final String parameterString = !methodData.getParameterPositions().isEmpty()
@@ -141,8 +141,8 @@ public class FunctionTimerAspect {
         final String paramValueStr = convertToString(joinPoint.getArgs()[pos]).trim();
         return VALID_PARAM_VALUE_PATTERN.matcher(paramValueStr).matches()
                 ? FunctionMetricsManager.getOptions()
-                            .map(options -> options.getCaseFormatConverter()
-                            .convert(paramValueStr)).orElse("")
+                            .getCaseFormatConverter()
+                            .convert(paramValueStr)
                 : "";
     }
 

@@ -16,6 +16,7 @@
 
 package io.appform.functionmetrics;
 
+import com.codahale.metrics.LockFreeExponentiallyDecayingReservoir;
 import com.codahale.metrics.MetricRegistry;
 import com.codahale.metrics.SlidingTimeWindowArrayReservoir;
 import com.codahale.metrics.Timer;
@@ -35,10 +36,6 @@ public class FunctionMetricsManager {
     private static MetricRegistry registry;
     private static String prefix;
     private static Options options;
-
-    public static Optional<Options> getOptions() {
-        return Optional.ofNullable(options);
-    }
 
     private FunctionMetricsManager() {}
 
@@ -62,11 +59,23 @@ public class FunctionMetricsManager {
             log.warn("Please call FunctionMetricsManager.initialize() to setup metrics collection. No metrics will be pushed.");
             return Optional.empty();
         }
-        MetricRegistry.MetricSupplier<Timer> metricSupplier = () -> new Timer(new SlidingTimeWindowArrayReservoir(60, TimeUnit.SECONDS));
-
         final String metricName = options.isEnableParameterCapture() && !Strings.isNullOrEmpty(invocation.getParameterString())
                 ? prefix + "." + invocation.getClassName() + "." + invocation.getMethodName() + "." + invocation.getParameterString() + "." + domain.getValue()
                 : prefix + "." + invocation.getClassName() + "." + invocation.getMethodName() + "." + domain.getValue();
-        return Optional.of(registry.timer(metricName, metricSupplier));
+        return Optional.of(registry.timer(metricName, () -> {
+            switch (options.getTimerType()) {
+                case DECAYING:
+                    return new Timer(LockFreeExponentiallyDecayingReservoir.builder().build());
+                case SLIDING:
+                default:
+                    // The correct behaviour is to throw an IllegalStateException here. However, it is not advisable to
+                    // fail actual method calls, so it is better to use the default timer type
+                    return new Timer(new SlidingTimeWindowArrayReservoir(60, TimeUnit.SECONDS));
+            }
+        }));
+    }
+
+    public static Options getOptions() {
+        return options;
     }
 }

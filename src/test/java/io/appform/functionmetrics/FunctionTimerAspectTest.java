@@ -23,7 +23,6 @@ import com.google.common.base.CaseFormat;
 import com.google.common.base.Stopwatch;
 import org.junit.Assert;
 import org.junit.BeforeClass;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import java.util.List;
@@ -46,6 +45,7 @@ public class FunctionTimerAspectTest {
                 new Options.OptionsBuilder()
                         .enableParameterCapture(true)
                         .caseFormatConverter(CaseFormat.LOWER_UNDERSCORE.converterTo(CaseFormat.LOWER_CAMEL))
+                        .timerReservoirType(TimerReservoirType.DECAYING)
                         .build());
     }
 
