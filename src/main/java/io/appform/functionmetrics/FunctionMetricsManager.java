@@ -26,24 +26,31 @@ import org.slf4j.LoggerFactory;
 
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * Global metrics manager that needs to be initialized at start
  */
 public class FunctionMetricsManager {
     private static final Logger log = LoggerFactory.getLogger(FunctionMetricsManager.class.getName());
-
+    private static final AtomicBoolean initialized = new AtomicBoolean(false);
+    private static Options options = new Options();
     private static MetricRegistry registry;
     private static String prefix;
-    private static Options options;
 
     private FunctionMetricsManager() {}
 
     public static void initialize(final String packageName, final MetricRegistry registry) {
-        initialize(packageName, registry, new Options());
+        initialize(packageName, registry, options);
     }
 
-    public static void initialize(final String packageName, final MetricRegistry registry, final Options options) {
+    public static synchronized void initialize(final String packageName,
+                                               final MetricRegistry registry,
+                                               final Options options) {
+        if (initialized.get()) {
+            log.warn("Function metrics already initialized");
+            return;
+        }
         log.info("Function Metrics prefix: {}", packageName);
         FunctionMetricsManager.registry = registry;
         FunctionMetricsManager.prefix = packageName;
@@ -52,10 +59,11 @@ public class FunctionMetricsManager {
             log.warn("Enabling caching for method annotations because enableParameterCapture flag is set to true");
             options.setDisableCacheOptimisation(false);
         }
+        initialized.set(true);
     }
 
     public static Optional<Timer> timer(final TimerDomain domain, final FunctionInvocation invocation) {
-        if (null == registry) {
+        if(!initialized.get()) {
             log.warn("Please call FunctionMetricsManager.initialize() to setup metrics collection. No metrics will be pushed.");
             return Optional.empty();
         }
@@ -73,6 +81,10 @@ public class FunctionMetricsManager {
                     return new Timer(new SlidingTimeWindowArrayReservoir(60, TimeUnit.SECONDS));
             }
         }));
+    }
+
+    public static boolean isInitialized() {
+        return initialized.get();
     }
 
     public static Options getOptions() {
