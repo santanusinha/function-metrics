@@ -68,7 +68,7 @@ public class FunctionMetricsManager {
     }
 
     public static Optional<Timer> timer(final TimerDomain domain, final FunctionInvocation invocation) {
-        if(!isInitialized()) {
+        if(!initialized.get()) {
             log.warn("Please call FunctionMetricsManager.initialize() to setup metrics collection. No metrics will be pushed.");
             return Optional.empty();
         }
@@ -86,10 +86,6 @@ public class FunctionMetricsManager {
                     return new Timer(new SlidingTimeWindowArrayReservoir(60, TimeUnit.SECONDS));
             }
         }));
-    }
-
-    public static boolean isInitialized() {
-        return initialized.get();
     }
 
     public static Options getOptions() {
