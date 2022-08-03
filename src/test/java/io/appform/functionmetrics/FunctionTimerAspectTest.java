@@ -45,6 +45,7 @@ public class FunctionTimerAspectTest {
                 new Options.OptionsBuilder()
                         .enableParameterCapture(true)
                         .caseFormatConverter(CaseFormat.LOWER_UNDERSCORE.converterTo(CaseFormat.LOWER_CAMEL))
+                        .timerReservoirType(TimerReservoirType.DECAYING)
                         .build());
     }
 
@@ -115,7 +116,47 @@ public class FunctionTimerAspectTest {
     }
 
     @Test
-    public void testMetricsCollectionParameterValid_NoArgs() throws Exception {
+    public void testMetricsCollectionParameterValidOverloadedFunction1() throws Exception {
+        final MyClass myClass = new MyClass();
+        myClass.parameterValidFunction(5,"John_Cartier047");
+
+        final FunctionInvocation invocation
+                = new FunctionInvocation("MyClass", "parameterValidFunction", "johnCartier047");
+        final Timer failureTimer
+                = FunctionMetricsManager.timer(TimerDomain.FAILURE, invocation).orElse(null);
+        Assert.assertNotNull(failureTimer);
+        Assert.assertEquals(0, failureTimer.getCount());
+        final Timer successTimer
+                = FunctionMetricsManager.timer(TimerDomain.SUCCESS, invocation).orElse(null);
+        Assert.assertNotNull(successTimer);
+        Assert.assertEquals(1, successTimer.getCount());
+    }
+
+    @Test
+    public void testMetricsCollectionParameterValidOverloadedFunction2() throws Exception {
+        final MyClass myClass = new MyClass();
+        myClass.parameterValidFunction("abc","true", -0.1f);
+
+        final FunctionInvocation invocation
+                = new FunctionInvocation("MyClass", "parameterValidFunction", "true.abc");
+        final Timer failureTimer
+                = FunctionMetricsManager.timer(TimerDomain.FAILURE, invocation).orElse(null);
+        Assert.assertNotNull(failureTimer);
+        Assert.assertEquals(0, failureTimer.getCount());
+        final Timer successTimer
+                = FunctionMetricsManager.timer(TimerDomain.SUCCESS, invocation).orElse(null);
+        Assert.assertNotNull(successTimer);
+        Assert.assertEquals(1, successTimer.getCount());
+        Assert.assertEquals(0, (long) FunctionMetricsManager.timer(TimerDomain.SUCCESS,
+                        new FunctionInvocation("MyClass", "parameterValidFunction", "true.def"))
+                .map(Timer::getCount).orElse(0L));
+        Assert.assertEquals(0, (long) FunctionMetricsManager.timer(TimerDomain.SUCCESS,
+                        new FunctionInvocation("MyClass", "parameterValidFunction", "abc.true"))
+                .map(Timer::getCount).orElse(0L));
+    }
+
+    @Test
+    public void testMetricsCollectionParameterValidNoArgs() throws Exception {
         final MyClass myClass = new MyClass();
         myClass.parameterValidFunction();
 
@@ -149,7 +190,7 @@ public class FunctionTimerAspectTest {
     }
 
     @Test
-    public void testMetricsCollectionParameterInvalid_VarArgs() throws Exception {
+    public void testMetricsCollectionParameterInvalidVarArgs() throws Exception {
         final MyClass myClass = new MyClass();
         myClass.parameterInvalidFunction("a", "b", "c", "d");
 
@@ -222,6 +263,7 @@ public class FunctionTimerAspectTest {
         final int numThreads = 10;
         final ExecutorService executorService = Executors.newFixedThreadPool(numThreads);
         final MyClass myClass = new MyClass();
+        System.out.println("Running MT test");
         final List<Future<Long>> futures = IntStream.range(0, numThreads)
                 .mapToObj(i -> executorService.submit(() -> {
                     final Stopwatch stopwatch = Stopwatch.createStarted();

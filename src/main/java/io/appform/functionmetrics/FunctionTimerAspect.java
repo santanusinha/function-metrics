@@ -45,7 +45,7 @@ import static io.appform.functionmetrics.FunctionMetricsManager.timer;
 @Aspect
 @SuppressWarnings("unused")
 public class FunctionTimerAspect {
-    private static final Logger log = LoggerFactory.getLogger(FunctionTimerAspect.class.getSimpleName());
+    private static final Logger log = LoggerFactory.getLogger(FunctionTimerAspect.class.getName());
 
     private final Map<String, MethodData> paramCache = new ConcurrentHashMap<>();
 
@@ -62,11 +62,7 @@ public class FunctionTimerAspect {
     @Around("monitoredFunctionCalled() && anyFunctionCalled()")
     public Object around(ProceedingJoinPoint joinPoint) throws Throwable {
         final Signature callSignature = joinPoint.getSignature();
-
-        final MethodData methodData = cacheDisabled()
-                                      ? createMethodData(callSignature)
-                                      : paramCache.computeIfAbsent(callSignature.toLongString(),
-                                                                   key -> createMethodData(callSignature));
+        final MethodData methodData = getMethodData(joinPoint, callSignature);
         final FunctionInvocation invocation = createFunctionInvocation(methodData, joinPoint, callSignature);
 
         final Stopwatch stopwatch = Stopwatch.createStarted();
@@ -87,10 +83,20 @@ public class FunctionTimerAspect {
     }
 
     private boolean cacheDisabled() {
-        return FunctionMetricsManager.getOptions().map(Options::isDisableCacheOptimisation).orElse(false);
+        return FunctionMetricsManager.getOptions().isDisableCacheOptimisation();
     }
 
-    private MethodData createMethodData(Signature callSignature) {
+    private boolean parameterCaptureEnabled() {
+        return FunctionMetricsManager.getOptions().isEnableParameterCapture();
+    }
+
+    private MethodData getMethodData(final ProceedingJoinPoint joinPoint, final Signature callSignature) {
+        return cacheDisabled()
+                ? createMethodData(joinPoint, callSignature)
+                : paramCache.computeIfAbsent(callSignature.toLongString(), key -> createMethodData(joinPoint, callSignature));
+    }
+
+    private MethodData createMethodData(final ProceedingJoinPoint joinPoint, final Signature callSignature) {
         final MethodSignature methodSignature = (MethodSignature) callSignature;
         final MonitoredFunction monitoredFunction = methodSignature.getMethod().getAnnotation(MonitoredFunction.class);
         final String className = Strings.isNullOrEmpty(monitoredFunction.className())
@@ -99,60 +105,71 @@ public class FunctionTimerAspect {
         final String methodName = Strings.isNullOrEmpty(monitoredFunction.method())
                                   ? callSignature.getName()
                                   : monitoredFunction.method();
-        return new MethodData(className, methodName);
+        final boolean isParameterCaptureEnabled = parameterCaptureEnabled();
+        return new MethodData(className, methodName, isParameterCaptureEnabled
+                ? getAnnotatedParamPositions(methodSignature)
+                : Collections.emptyList());
     }
 
     private FunctionInvocation createFunctionInvocation(
-            final MethodData methodData, final ProceedingJoinPoint joinPoint, final Signature callSignature) {
+            final MethodData methodData,
+            final ProceedingJoinPoint joinPoint,
+            final Signature callSignature) {
         final MethodSignature methodSignature = (MethodSignature) callSignature;
-        final Options options = FunctionMetricsManager.getOptions().orElse(null);
-
+        final Options options = FunctionMetricsManager.getOptions();
         final String className = methodData.getClassName();
         final String methodName = methodData.getMethodName();
-        final String parameterString = createParamString(className, methodName, joinPoint, methodSignature, options)
-                .orElse("");
-
-        log.trace("Called for class: {} method: {} parameterString: {}",
-                  className, methodName, parameterString);
+        final String parameterString = !methodData.getParameterPositions().isEmpty()
+                ? getParamString(joinPoint, methodData.getParameterPositions()).orElse("")
+                : "";
+        log.trace("Called for class: {} method: {} parameterString: {}", className, methodName, parameterString);
         return new FunctionInvocation(className, methodName, parameterString);
     }
 
-    private Optional<String> createParamString(
-            String className,
-            String methodName,
-            ProceedingJoinPoint joinPoint,
-            MethodSignature methodSignature,
-            Options options) {
-        if (options != null && options.isEnableParameterCapture()) {
-            if (methodSignature.getMethod().getParameterCount() != joinPoint.getArgs().length) {
-                log.warn(
-                        "Unusual scenario - number of parameters in method signature doesn't match with args supplied in " +
-                                "runtime, so skipping parameter capture altogether in metric name for this invocation " +
-                                "[class = {}, method = {}]",
-                        className,
-                        methodName);
-                return Optional.empty();
-            }
+    private boolean isParamCaptureRequired(final MethodSignature methodSignature) {
+        return IntStream.range(0, methodSignature.getMethod().getParameterCount())
+                .anyMatch(i -> methodSignature.getMethod()
+                        .getParameters()[i].getAnnotation(MetricTerm.class) != null);
+    }
+
+    private String getParamValueAtPos(final ProceedingJoinPoint joinPoint,
+                                      final int pos) {
+        if (pos >= joinPoint.getArgs().length) {
+            log.warn("Unusual scenario: parameter position {} is >= args length {}", pos, joinPoint.getArgs().length);
+            return "";
         }
-        else {
-            return Optional.empty();
-        }
-        final List<String> paramValues = IntStream.range(0, methodSignature.getMethod().getParameterCount())
+        final String paramValueStr = convertToString(joinPoint.getArgs()[pos]).trim();
+        return VALID_PARAM_VALUE_PATTERN.matcher(paramValueStr).matches()
+                ? FunctionMetricsManager.getOptions()
+                            .getCaseFormatConverter()
+                            .convert(paramValueStr)
+                : "";
+    }
+
+    private List<Integer> getAnnotatedParamPositions(final MethodSignature methodSignature) {
+        return IntStream.range(0, methodSignature.getMethod().getParameterCount())
                 .mapToObj(i -> {
-                    final MetricTerm metricTerm = methodSignature.getMethod()
-                            .getParameters()[i].getAnnotation(MetricTerm.class);
+                    final MetricTerm metricTerm = methodSignature.getMethod().getParameters()[i]
+                            .getAnnotation(MetricTerm.class);
                     if (metricTerm == null) {
                         return null;
                     }
-                    final String paramValueStr = convertToString(joinPoint.getArgs()[i]).trim();
-                    final String sanitizedParamValue = VALID_PARAM_VALUE_PATTERN.matcher(paramValueStr).matches()
-                                                       ? options.getCaseFormatConverter().convert(paramValueStr)
-                                                       : "";
-                    return new Pair<>(metricTerm.order(), sanitizedParamValue);
+                    return new Pair<>(metricTerm.order(), i);
                 })
                 .filter(Objects::nonNull) // filter parameters that are not metric terms
-                .sorted(Comparator.comparingInt(Pair::getKey)) // sort metric terms by order attribute
-                .map(Pair::getValue) // extract parameter value
+                .sorted(Comparator.comparingInt(Pair::getKey))
+                .map(Pair::getValue) // sort metric terms by order attribute
+                .collect(Collectors.toList());
+    }
+
+    private Optional<String> getParamString(final ProceedingJoinPoint joinPoint,
+                                            final List<Integer> paramPositions) {
+        if (!parameterCaptureEnabled()) {
+            return Optional.empty();
+        }
+        List<String> paramValues = paramPositions
+                .stream()
+                .map(pos -> getParamValueAtPos(joinPoint, pos)) // extract parameter value
                 .collect(Collectors.toList());
         // if and only if after all transformations none of the parameter values are null or
         // empty will we add the parameter string to the metric name
@@ -172,7 +189,7 @@ public class FunctionTimerAspect {
         if (obj == null) {
             return "";
         }
-        if (obj instanceof String) {
+        else if (obj instanceof String) {
             return (String) obj;
         }
         else if (obj instanceof Enum) {

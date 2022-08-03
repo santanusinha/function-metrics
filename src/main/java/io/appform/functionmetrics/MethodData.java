@@ -16,16 +16,20 @@
 
 package io.appform.functionmetrics;
 
+import java.util.List;
+
 /**
  * Stores data about method call
  */
 public class MethodData {
     private final String className;
     private final String methodName;
+    private final List<Integer> parameterPositions;
 
-    public MethodData(String className, String methodName) {
+    public MethodData(String className, String methodName, List<Integer> parameterIndex) {
         this.className = className;
         this.methodName = methodName;
+        this.parameterPositions = parameterIndex;
     }
 
     public String getClassName() {
@@ -34,5 +38,9 @@ public class MethodData {
 
     public String getMethodName() {
         return methodName;
+    }
+
+    public List<Integer> getParameterPositions() {
+        return parameterPositions;
     }
 }

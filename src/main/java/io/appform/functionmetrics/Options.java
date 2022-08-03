@@ -23,6 +23,7 @@ public class Options {
     private boolean enableParameterCapture;
     private Converter<String, String> caseFormatConverter = CaseFormat.LOWER_CAMEL.converterTo(CaseFormat.LOWER_CAMEL);
     private boolean disableCacheOptimisation;
+    private TimerReservoirType timerReservoirType = TimerReservoirType.SLIDING;
 
     public boolean isEnableParameterCapture() {
         return enableParameterCapture;
@@ -36,10 +37,19 @@ public class Options {
         return disableCacheOptimisation;
     }
 
+    public void setDisableCacheOptimisation(boolean disableCacheOptimisation) {
+        this.disableCacheOptimisation = disableCacheOptimisation;
+    }
+
+    public TimerReservoirType getTimerType() {
+        return timerReservoirType;
+    }
+
     public static class OptionsBuilder {
         private boolean enableParameterCapture;
         private Converter<String, String> caseFormatConverter;
         private boolean disableCacheOptimisation;
+        private TimerReservoirType timerReservoirType;
 
         public OptionsBuilder enableParameterCapture(final boolean enableParameterCapture) {
             this.enableParameterCapture = enableParameterCapture;
@@ -60,6 +70,11 @@ public class Options {
             return this;
         }
 
+        public OptionsBuilder timerReservoirType(final TimerReservoirType timerReservoirType) {
+            this.timerReservoirType = timerReservoirType;
+            return this;
+        }
+
         public Options build() {
             Options options = new Options();
             if (caseFormatConverter != null) {
@@ -67,6 +82,9 @@ public class Options {
             }
             options.enableParameterCapture = enableParameterCapture;
             options.disableCacheOptimisation = disableCacheOptimisation;
+            if (timerReservoirType != null) {
+                options.timerReservoirType = timerReservoirType;
+            }
             return options;
         }
     }

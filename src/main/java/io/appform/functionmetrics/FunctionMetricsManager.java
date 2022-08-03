@@ -16,6 +16,7 @@
 
 package io.appform.functionmetrics;
 
+import com.codahale.metrics.LockFreeExponentiallyDecayingReservoir;
 import com.codahale.metrics.MetricRegistry;
 import com.codahale.metrics.SlidingTimeWindowArrayReservoir;
 import com.codahale.metrics.Timer;
@@ -25,44 +26,69 @@ import org.slf4j.LoggerFactory;
 
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * Global metrics manager that needs to be initialized at start
  */
 public class FunctionMetricsManager {
-    private static final Logger log = LoggerFactory.getLogger(FunctionMetricsManager.class.getSimpleName());
-
+    private static final Logger log = LoggerFactory.getLogger(FunctionMetricsManager.class.getName());
+    private static final AtomicBoolean initialized = new AtomicBoolean(false);
+    private static Options options = new Options();
     private static MetricRegistry registry;
     private static String prefix;
-    private static Options options;
-
-    public static Optional<Options> getOptions() {
-        return Optional.ofNullable(options);
-    }
 
     private FunctionMetricsManager() {}
 
     public static void initialize(final String packageName, final MetricRegistry registry) {
-        initialize(packageName, registry, new Options());
+        initialize(packageName, registry, options);
     }
 
-    public static void initialize(final String packageName, final MetricRegistry registry, final Options options) {
-        log.info("Function Metrics prefix: {}", packageName);
-        FunctionMetricsManager.registry = registry;
-        FunctionMetricsManager.prefix = packageName;
-        FunctionMetricsManager.options = options;
+    public static void initialize(final String packageName,
+                                  final MetricRegistry registry,
+                                  final Options options) {
+        if (initialized.get()) {
+            log.warn("Function metrics already initialized");
+            return;
+        }
+        synchronized (FunctionMetricsManager.class) {
+            if (initialized.get()) {
+                return;
+            }
+            log.info("Function Metrics prefix: {}", packageName);
+            FunctionMetricsManager.registry = registry;
+            FunctionMetricsManager.prefix = packageName;
+            FunctionMetricsManager.options = options;
+            if (options.isEnableParameterCapture() && options.isDisableCacheOptimisation()) {
+                log.warn("Enabling caching for method annotations because enableParameterCapture flag is set to true");
+                options.setDisableCacheOptimisation(false);
+            }
+        }
+        initialized.set(true);
     }
 
     public static Optional<Timer> timer(final TimerDomain domain, final FunctionInvocation invocation) {
-        if(null == registry) {
+        if(!initialized.get()) {
             log.warn("Please call FunctionMetricsManager.initialize() to setup metrics collection. No metrics will be pushed.");
             return Optional.empty();
         }
-        MetricRegistry.MetricSupplier<Timer> metricSupplier = () -> new Timer(new SlidingTimeWindowArrayReservoir(60, TimeUnit.SECONDS));
-
         final String metricName = options.isEnableParameterCapture() && !Strings.isNullOrEmpty(invocation.getParameterString())
                 ? prefix + "." + invocation.getClassName() + "." + invocation.getMethodName() + "." + invocation.getParameterString() + "." + domain.getValue()
                 : prefix + "." + invocation.getClassName() + "." + invocation.getMethodName() + "." + domain.getValue();
-        return Optional.of(registry.timer(metricName, metricSupplier));
+        return Optional.of(registry.timer(metricName, () -> {
+            switch (options.getTimerType()) {
+                case DECAYING:
+                    return new Timer(LockFreeExponentiallyDecayingReservoir.builder().build());
+                case SLIDING:
+                default:
+                    // The correct behaviour is to throw an IllegalStateException here. However, it is not advisable to
+                    // fail actual method calls, so it is better to use the default timer type
+                    return new Timer(new SlidingTimeWindowArrayReservoir(60, TimeUnit.SECONDS));
+            }
+        }));
+    }
+
+    public static Options getOptions() {
+        return options;
     }
 }

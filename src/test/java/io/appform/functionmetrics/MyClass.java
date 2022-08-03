@@ -38,22 +38,32 @@ public class MyClass {
 
     @MonitoredFunction()
     public void parameterValidFunction(@MetricTerm String x, @MetricTerm String y) {
-        System.out.println(String.format("x = %s, y = %s", x, y));
+        System.out.printf("x = %s, y = %s%n", x, y);
+    }
+
+    @MonitoredFunction()
+    public void parameterValidFunction(int x, @MetricTerm String y) {
+        System.out.printf("x = %d, y = %s%n", x, y);
+    }
+
+    @MonitoredFunction()
+    public void parameterValidFunction(@MetricTerm(order = 5) String x, @MetricTerm String y, float z) {
+        System.out.printf("x = %s, y = %s, z = %f%n", x, y, z);
     }
 
     @MonitoredFunction()
     public void parameterInvalidFunction(@MetricTerm String x, @MetricTerm int y) {
-        System.out.println(String.format("x = %s, y = %d", x, y));
+        System.out.printf("x = %s, y = %d%n", x, y);
     }
 
     @MonitoredFunction()
     public void parameterInvalidFunction(@MetricTerm int x, @MetricTerm int y) {
-        System.out.println(String.format("x = %d, y = %d", x, y));
+        System.out.printf("x = %d, y = %d%n", x, y);
     }
 
     @MonitoredFunction(method = "parameterInvalidVarArgsFunction")
     public void parameterInvalidFunction(@MetricTerm String x, @MetricTerm String... y) {
-        System.out.println(String.format("x = %s, y = [%s]", x, Joiner.on(",").join(y)));
+        System.out.printf("x = %s, y = [%s]%n", x, Joiner.on(",").join(y));
     }
 
     @MonitoredFunction(method = "parameterValidNoArgsFunction")
@@ -71,12 +81,12 @@ public class MyClass {
 
     @MonitoredFunction
     public void overLoadF(int x, int y) {
-        System.out.println(String.format("X = %d Y = %d", x,y));
+        System.out.printf("X = %d Y = %d%n", x,y);
     }
 
     @MonitoredFunction
     public void overLoadF(int x, String y) {
-        System.out.println(String.format("X = %d Y = %s", x, y));
+        System.out.printf("X = %d Y = %s%n", x, y);
     }
 
     void perfFunction() {}
