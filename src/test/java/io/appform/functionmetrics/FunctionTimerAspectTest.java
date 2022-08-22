@@ -116,6 +116,23 @@ public class FunctionTimerAspectTest {
     }
 
     @Test
+    public void testMetricsCollectionParameterValidWithHyphen() throws Exception {
+        final MyClass myClass = new MyClass();
+        myClass.parameterValidFunction("a","John_Cartier-047");
+
+        final FunctionInvocation invocation
+                = new FunctionInvocation("MyClass", "parameterValidFunction", "a.johnCartier-047");
+        final Timer failureTimer
+                = FunctionMetricsManager.timer(TimerDomain.FAILURE, invocation).orElse(null);
+        Assert.assertNotNull(failureTimer);
+        Assert.assertEquals(0, failureTimer.getCount());
+        final Timer successTimer
+                = FunctionMetricsManager.timer(TimerDomain.SUCCESS, invocation).orElse(null);
+        Assert.assertNotNull(successTimer);
+        Assert.assertEquals(1, successTimer.getCount());
+    }
+
+    @Test
     public void testMetricsCollectionParameterValidOverloadedFunction1() throws Exception {
         final MyClass myClass = new MyClass();
         myClass.parameterValidFunction(5,"John_Cartier047");
