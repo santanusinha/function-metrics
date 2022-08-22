@@ -22,7 +22,7 @@ Put this into the `dependencies` section of your pom file:
     <dependency>
         <groupId>io.appform.functionmetrics</groupId>
         <artifactId>function-metrics</artifactId>
-        <version>1.0.13</version>
+        <version>1.0.14</version>
     </dependency>
 ```
 
@@ -361,4 +361,4 @@ _**NOTE:** This is output from Dropwizard metrics console reporter._
 Apache 2
 
 ## Version
-1.0.12
+1.0.14
