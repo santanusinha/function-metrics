@@ -16,11 +16,13 @@
 
 package io.appform.functionmetrics;
 
+import com.codahale.metrics.MetricFilter;
 import com.codahale.metrics.MetricRegistry;
 import com.codahale.metrics.SharedMetricRegistries;
 import com.codahale.metrics.Timer;
 import com.google.common.base.CaseFormat;
 import com.google.common.base.Stopwatch;
+import org.junit.After;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -39,14 +41,16 @@ public class FunctionTimerAspectTest {
 
     @BeforeClass
     public static void setup() {
-        FunctionMetricsManager.initialize(
-                "phonepe.test",
-                registry,
-                new Options.OptionsBuilder()
-                        .enableParameterCapture(true)
+        FunctionMetricsManager.initialize("phonepe.test", registry,
+                new Options.OptionsBuilder().enableParameterCapture(true)
                         .caseFormatConverter(CaseFormat.LOWER_UNDERSCORE.converterTo(CaseFormat.LOWER_CAMEL))
                         .timerReservoirType(TimerReservoirType.DECAYING)
                         .build());
+    }
+
+    @After
+    public void cleanup(){
+        registry.removeMatching(MetricFilter.ALL);
     }
 
     @Test
@@ -56,27 +60,33 @@ public class FunctionTimerAspectTest {
         myClass.nonTimedFunction();
         myClass.pubFunction(3);
 
-        final FunctionInvocation myFunctionInvocation
-                = new FunctionInvocation("MyClass", "myFunction", "");
-        final FunctionInvocation nonTimedFunctionInvocation
-                = new FunctionInvocation("MyClass", "nonTimedFunction", "");
-        final Timer failureTimer
-                = FunctionMetricsManager.timer(TimerDomain.FAILURE, myFunctionInvocation).orElse(null);
-        Assert.assertEquals(0, failureTimer.getCount());
-        final Timer successTimer
-                = FunctionMetricsManager.timer(TimerDomain.SUCCESS, myFunctionInvocation).orElse(null);
-        Assert.assertEquals(2, successTimer.getCount());
-        final Timer allTimer = FunctionMetricsManager.timer(TimerDomain.ALL, myFunctionInvocation).orElse(null);
-        Assert.assertEquals(2, allTimer.getCount());
-        Assert.assertEquals(0,
-                            FunctionMetricsManager.timer(TimerDomain.ALL, nonTimedFunctionInvocation).orElse(null).getCount());
-
+        final FunctionInvocation myFunctionInvocation = new FunctionInvocation("MyClass", "myFunction", "");
+        final FunctionInvocation nonTimedFunctionInvocation = new FunctionInvocation("MyClass", "nonTimedFunction", "");
+        final List<Timer> failureTimers = FunctionMetricsManager.timers(TimerDomain.FAILURE, myFunctionInvocation);
+        Assert.assertEquals(1, failureTimers.size());
+        Assert.assertEquals(0, failureTimers.get(0)
+                .getCount());
+        final List<Timer> successTimers = FunctionMetricsManager.timers(TimerDomain.SUCCESS, myFunctionInvocation);
+        Assert.assertEquals(1, successTimers.size());
+        Assert.assertEquals(2, successTimers.get(0)
+                .getCount());
+        final List<Timer> allTimers = FunctionMetricsManager.timers(TimerDomain.ALL, myFunctionInvocation);
+        Assert.assertEquals(1, allTimers.size());
+        Assert.assertEquals(2, allTimers.get(0)
+                .getCount());
+        List<Timer> nonTimers = FunctionMetricsManager.timers(TimerDomain.ALL, nonTimedFunctionInvocation);
+        Assert.assertEquals(1, nonTimers.size());
+        Assert.assertEquals(0, nonTimers.get(0)
+                .getCount());
         try {
             myClass.pubFunction(2);
         } catch (Exception e) {
-            Assert.assertEquals(1, failureTimer.getCount());
-            Assert.assertEquals(2, successTimer.getCount());
-            Assert.assertEquals(3, allTimer.getCount());
+            Assert.assertEquals(1, failureTimers.get(0)
+                    .getCount());
+            Assert.assertEquals(2, successTimers.get(0)
+                    .getCount());
+            Assert.assertEquals(3, allTimers.get(0)
+                    .getCount());
         }
     }
 
@@ -84,92 +94,108 @@ public class FunctionTimerAspectTest {
     @Test
     public void testMetricsCollectionCustomName() throws Exception {
         final MyClass myClass = new MyClass();
-        myClass.myFunction(2,3);
+        myClass.myFunction(2, 3);
 
-        final FunctionInvocation invocation
-                = new FunctionInvocation("MyClass", "myOverloadedFunction", "");
-        final Timer failureTimer
-                = FunctionMetricsManager.timer(TimerDomain.FAILURE, invocation).orElse(null);
-        Assert.assertNotNull(failureTimer);
-        Assert.assertEquals(0, failureTimer.getCount());
-        final Timer successTimer
-                = FunctionMetricsManager.timer(TimerDomain.SUCCESS, invocation).orElse(null);
-        Assert.assertNotNull(successTimer);
-        Assert.assertEquals(1, successTimer.getCount());
+        final FunctionInvocation invocation = new FunctionInvocation("MyClass", "myOverloadedFunction", "");
+        final List<Timer> failureTimers = FunctionMetricsManager.timers(TimerDomain.FAILURE, invocation);
+        Assert.assertEquals(1, failureTimers.size());
+        Assert.assertEquals(0, failureTimers.get(0)
+                .getCount());
+        final List<Timer> successTimers = FunctionMetricsManager.timers(TimerDomain.SUCCESS, invocation);
+        Assert.assertEquals(1, successTimers.size());
+        Assert.assertEquals(1, successTimers.get(0)
+                .getCount());
     }
 
     @Test
     public void testMetricsCollectionParameterValid() throws Exception {
         final MyClass myClass = new MyClass();
-        myClass.parameterValidFunction("a","John_Cartier047");
+        myClass.parameterValidFunction("a", "John_Cartier047");
 
-        final FunctionInvocation invocation
-                = new FunctionInvocation("MyClass", "parameterValidFunction", "a.johnCartier047");
-        final Timer failureTimer
-                = FunctionMetricsManager.timer(TimerDomain.FAILURE, invocation).orElse(null);
-        Assert.assertNotNull(failureTimer);
-        Assert.assertEquals(0, failureTimer.getCount());
-        final Timer successTimer
-                = FunctionMetricsManager.timer(TimerDomain.SUCCESS, invocation).orElse(null);
-        Assert.assertNotNull(successTimer);
-        Assert.assertEquals(1, successTimer.getCount());
+        final FunctionInvocation invocation = new FunctionInvocation("MyClass", "parameterValidFunction",
+                "a.johnCartier047");
+        final List<Timer> failureTimers = FunctionMetricsManager.timers(TimerDomain.FAILURE, invocation);
+        Assert.assertEquals(2, failureTimers.size());
+        failureTimers.forEach(failureTimer -> {
+            Assert.assertEquals(0, failureTimer.getCount());
+        });
+
+        final List<Timer> successTimers = FunctionMetricsManager.timers(TimerDomain.SUCCESS, invocation);
+        Assert.assertEquals(2, successTimers.size());
+        successTimers.forEach(successTimer -> {
+            Assert.assertEquals(1, successTimer.getCount());
+        });
     }
 
     @Test
     public void testMetricsCollectionParameterValidWithHyphen() throws Exception {
         final MyClass myClass = new MyClass();
-        myClass.parameterValidFunction("a","John_Cartier-047");
+        myClass.parameterValidFunction("a", "John_Cartier-047");
 
-        final FunctionInvocation invocation
-                = new FunctionInvocation("MyClass", "parameterValidFunction", "a.johnCartier-047");
-        final Timer failureTimer
-                = FunctionMetricsManager.timer(TimerDomain.FAILURE, invocation).orElse(null);
-        Assert.assertNotNull(failureTimer);
-        Assert.assertEquals(0, failureTimer.getCount());
-        final Timer successTimer
-                = FunctionMetricsManager.timer(TimerDomain.SUCCESS, invocation).orElse(null);
-        Assert.assertNotNull(successTimer);
-        Assert.assertEquals(1, successTimer.getCount());
+        final FunctionInvocation invocation = new FunctionInvocation("MyClass", "parameterValidFunction",
+                "a.johnCartier-047");
+        final List<Timer> failureTimers = FunctionMetricsManager.timers(TimerDomain.FAILURE, invocation);
+        Assert.assertEquals(2, failureTimers.size());
+        failureTimers.forEach(failureTimer -> {
+            Assert.assertEquals(0, failureTimer.getCount());
+        });
+
+        final List<Timer> successTimers = FunctionMetricsManager.timers(TimerDomain.SUCCESS, invocation);
+        Assert.assertEquals(2, successTimers.size());
+        successTimers.forEach(successTimer -> {
+            Assert.assertEquals(1, successTimer.getCount());
+        });
     }
 
     @Test
     public void testMetricsCollectionParameterValidOverloadedFunction1() throws Exception {
         final MyClass myClass = new MyClass();
-        myClass.parameterValidFunction(5,"John_Cartier047");
+        myClass.parameterValidFunction(5, "John_Cartier047");
 
-        final FunctionInvocation invocation
-                = new FunctionInvocation("MyClass", "parameterValidFunction", "johnCartier047");
-        final Timer failureTimer
-                = FunctionMetricsManager.timer(TimerDomain.FAILURE, invocation).orElse(null);
-        Assert.assertNotNull(failureTimer);
-        Assert.assertEquals(0, failureTimer.getCount());
-        final Timer successTimer
-                = FunctionMetricsManager.timer(TimerDomain.SUCCESS, invocation).orElse(null);
-        Assert.assertNotNull(successTimer);
-        Assert.assertEquals(1, successTimer.getCount());
+        final FunctionInvocation invocation = new FunctionInvocation("MyClass", "parameterValidFunction",
+                "johnCartier047");
+        final List<Timer> failureTimers = FunctionMetricsManager.timers(TimerDomain.FAILURE, invocation);
+        Assert.assertEquals(2, failureTimers.size());
+        failureTimers.forEach(failureTimer -> {
+            Assert.assertEquals(0, failureTimer.getCount());
+        });
+
+        final List<Timer> successTimers = FunctionMetricsManager.timers(TimerDomain.SUCCESS, invocation);
+        Assert.assertEquals(2, successTimers.size());
+        successTimers.forEach(successTimer -> {
+            Assert.assertEquals(1, successTimer.getCount());
+        });
     }
 
     @Test
     public void testMetricsCollectionParameterValidOverloadedFunction2() throws Exception {
         final MyClass myClass = new MyClass();
-        myClass.parameterValidFunction("abc","true", -0.1f);
+        myClass.parameterValidFunction("abc", "true", -0.1f);
 
-        final FunctionInvocation invocation
-                = new FunctionInvocation("MyClass", "parameterValidFunction", "true.abc");
-        final Timer failureTimer
-                = FunctionMetricsManager.timer(TimerDomain.FAILURE, invocation).orElse(null);
-        Assert.assertNotNull(failureTimer);
-        Assert.assertEquals(0, failureTimer.getCount());
-        final Timer successTimer
-                = FunctionMetricsManager.timer(TimerDomain.SUCCESS, invocation).orElse(null);
-        Assert.assertNotNull(successTimer);
-        Assert.assertEquals(1, successTimer.getCount());
-        Assert.assertEquals(0, (long) FunctionMetricsManager.timer(TimerDomain.SUCCESS,
-                        new FunctionInvocation("MyClass", "parameterValidFunction", "true.def"))
-                .map(Timer::getCount).orElse(0L));
-        Assert.assertEquals(0, (long) FunctionMetricsManager.timer(TimerDomain.SUCCESS,
-                        new FunctionInvocation("MyClass", "parameterValidFunction", "abc.true"))
-                .map(Timer::getCount).orElse(0L));
+        final FunctionInvocation invocation = new FunctionInvocation("MyClass", "parameterValidFunction", "true.abc");
+        final List<Timer> failureTimers = FunctionMetricsManager.timers(TimerDomain.FAILURE, invocation);
+        Assert.assertEquals(2, failureTimers.size());
+        failureTimers.forEach(failureTimer -> {
+            Assert.assertEquals(0, failureTimer.getCount());
+        });
+        final List<Timer> successTimers = FunctionMetricsManager.timers(TimerDomain.SUCCESS, invocation);
+        Assert.assertEquals(2, successTimers.size());
+        successTimers.forEach(successTimer -> {
+            Assert.assertEquals(1, successTimer.getCount());
+        });
+        registry.removeMatching(MetricFilter.ALL);
+        List<Timer> timers = FunctionMetricsManager.timers(TimerDomain.SUCCESS,
+                new FunctionInvocation("MyClass", "parameterValidFunction", "true.def"));
+        Assert.assertEquals(2, timers.size());
+        Assert.assertEquals(0, timers.get(0).getCount());
+        Assert.assertEquals(0, timers.get(1).getCount());
+
+        timers = FunctionMetricsManager.timers(TimerDomain.SUCCESS,
+                new FunctionInvocation("MyClass", "parameterValidFunction", "abc.true"));
+        Assert.assertEquals(2, timers.size());
+        Assert.assertEquals(0, timers.get(0).getCount());
+        Assert.assertEquals(0, timers.get(1).getCount());
+
     }
 
     @Test
@@ -179,31 +205,28 @@ public class FunctionTimerAspectTest {
 
         final FunctionInvocation invocation
                 = new FunctionInvocation("MyClass", "parameterValidNoArgsFunction", "");
-        final Timer failureTimer
-                = FunctionMetricsManager.timer(TimerDomain.FAILURE, invocation).orElse(null);
-        Assert.assertNotNull(failureTimer);
-        Assert.assertEquals(0, failureTimer.getCount());
-        final Timer successTimer
-                = FunctionMetricsManager.timer(TimerDomain.SUCCESS, invocation).orElse(null);
-        Assert.assertNotNull(successTimer);
-        Assert.assertEquals(1, successTimer.getCount());
+        final List<Timer> failureTimers = FunctionMetricsManager.timers(TimerDomain.FAILURE, invocation);
+        Assert.assertEquals(1, failureTimers.size());
+        Assert.assertEquals(0, failureTimers.get(0).getCount());
+
+        final List<Timer> successTimers = FunctionMetricsManager.timers(TimerDomain.SUCCESS, invocation);
+        Assert.assertEquals(1, successTimers.size());
+        Assert.assertEquals(1, successTimers.get(0).getCount());
     }
 
     @Test
     public void testMetricsCollectionParameterInvalid() throws Exception {
         final MyClass myClass = new MyClass();
-        myClass.parameterInvalidFunction("a",5);
+        myClass.parameterInvalidFunction("a", 5);
 
-        final FunctionInvocation invocation
-                = new FunctionInvocation("MyClass", "parameterInvalidFunction",  "");
-        final Timer failureTimer
-                = FunctionMetricsManager.timer(TimerDomain.FAILURE, invocation).orElse(null);
-        Assert.assertNotNull(failureTimer);
-        Assert.assertEquals(0, failureTimer.getCount());
-        final Timer successTimer
-                = FunctionMetricsManager.timer(TimerDomain.SUCCESS, invocation).orElse(null);
-        Assert.assertNotNull(successTimer);
-        Assert.assertEquals(1, successTimer.getCount());
+        final FunctionInvocation invocation = new FunctionInvocation("MyClass", "parameterInvalidFunction", "");
+        final List<Timer> failureTimers = FunctionMetricsManager.timers(TimerDomain.FAILURE, invocation);
+        Assert.assertEquals(1, failureTimers.size());
+        Assert.assertEquals(0, failureTimers.get(0).getCount());
+
+        final List<Timer> successTimers = FunctionMetricsManager.timers(TimerDomain.SUCCESS, invocation);
+        Assert.assertEquals(1, successTimers.size());
+        Assert.assertEquals(1, successTimers.get(0).getCount());
     }
 
     @Test
@@ -213,14 +236,13 @@ public class FunctionTimerAspectTest {
 
         final FunctionInvocation invocation
                 = new FunctionInvocation("MyClass", "parameterInvalidVarArgsFunction",  "");
-        final Timer failureTimer
-                = FunctionMetricsManager.timer(TimerDomain.FAILURE, invocation).orElse(null);
-        Assert.assertNotNull(failureTimer);
-        Assert.assertEquals(0, failureTimer.getCount());
-        final Timer successTimer
-                = FunctionMetricsManager.timer(TimerDomain.SUCCESS, invocation).orElse(null);
-        Assert.assertNotNull(successTimer);
-        Assert.assertEquals(1, successTimer.getCount());
+        final List<Timer> failureTimers = FunctionMetricsManager.timers(TimerDomain.FAILURE, invocation);
+        Assert.assertEquals(1, failureTimers.size());
+        Assert.assertEquals(0, failureTimers.get(0).getCount());
+
+        final List<Timer> successTimers = FunctionMetricsManager.timers(TimerDomain.SUCCESS, invocation);
+        Assert.assertEquals(1, successTimers.size());
+        Assert.assertEquals(1, successTimers.get(0).getCount());
     }
 
     @Test
@@ -231,14 +253,13 @@ public class FunctionTimerAspectTest {
 
         final FunctionInvocation invocation
                 = new FunctionInvocation("MyClass", "overLoadF", "");
-        final Timer failureTimer
-                = FunctionMetricsManager.timer(TimerDomain.FAILURE, invocation).orElse(null);
-        Assert.assertNotNull(failureTimer);
-        Assert.assertEquals(0, failureTimer.getCount());
-        final Timer successTimer
-                = FunctionMetricsManager.timer(TimerDomain.SUCCESS, invocation).orElse(null);
-        Assert.assertNotNull(successTimer);
-        Assert.assertEquals(20, successTimer.getCount());
+        final List<Timer> failureTimers = FunctionMetricsManager.timers(TimerDomain.FAILURE, invocation);
+        Assert.assertEquals(1, failureTimers.size());
+        Assert.assertEquals(0, failureTimers.get(0).getCount());
+
+        final List<Timer> successTimers = FunctionMetricsManager.timers(TimerDomain.SUCCESS, invocation);
+        Assert.assertEquals(1, successTimers.size());
+        Assert.assertEquals(20, successTimers.get(0).getCount());
         //This is 20 because params are not identified individually
     }
 

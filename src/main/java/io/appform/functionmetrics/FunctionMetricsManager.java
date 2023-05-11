@@ -21,10 +21,12 @@ import com.codahale.metrics.MetricRegistry;
 import com.codahale.metrics.SlidingTimeWindowArrayReservoir;
 import com.codahale.metrics.Timer;
 import com.google.common.base.Strings;
+import com.google.common.collect.ImmutableList;
+import java.util.ArrayList;
+import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -32,15 +34,18 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * Global metrics manager that needs to be initialized at start
  */
 public class FunctionMetricsManager {
+
     private static final Logger log = LoggerFactory.getLogger(FunctionMetricsManager.class.getName());
     private static final AtomicBoolean initialized = new AtomicBoolean(false);
     private static Options options = new Options();
     private static MetricRegistry registry;
     private static String prefix;
 
-    private FunctionMetricsManager() {}
+    private FunctionMetricsManager() {
+    }
 
-    public static void initialize(final String packageName, final MetricRegistry registry) {
+    public static void initialize(final String packageName,
+                                  final MetricRegistry registry) {
         initialize(packageName, registry, options);
     }
 
@@ -67,25 +72,40 @@ public class FunctionMetricsManager {
         initialized.set(true);
     }
 
-    public static Optional<Timer> timer(final TimerDomain domain, final FunctionInvocation invocation) {
-        if(!initialized.get()) {
-            log.warn("Please call FunctionMetricsManager.initialize() to setup metrics collection. No metrics will be pushed.");
-            return Optional.empty();
+    public static List<Timer> timers(final TimerDomain domain,
+                                     final FunctionInvocation invocation) {
+        if (!initialized.get()) {
+            log.warn(
+                    "Please call FunctionMetricsManager.initialize() to setup metrics collection. No metrics will be pushed.");
+            return new ArrayList<>();
         }
-        final String metricName = options.isEnableParameterCapture() && !Strings.isNullOrEmpty(invocation.getParameterString())
-                ? prefix + "." + invocation.getClassName() + "." + invocation.getMethodName() + "." + invocation.getParameterString() + "." + domain.getValue()
-                : prefix + "." + invocation.getClassName() + "." + invocation.getMethodName() + "." + domain.getValue();
-        return Optional.of(registry.timer(metricName, () -> {
+        final String metricName =
+                prefix + "." + invocation.getClassName() + "." + invocation.getMethodName() + "." + domain.getValue();
+        final String parameterizedMetricName =
+                options.isEnableParameterCapture() && !Strings.isNullOrEmpty(invocation.getParameterString())
+                ? prefix + "." + invocation.getClassName() + "." + invocation.getMethodName() + "."
+                        + invocation.getParameterString() + "." + domain.getValue()
+                : null;
+        if (Strings.isNullOrEmpty(parameterizedMetricName)) {
+            return ImmutableList.of(getTimer(metricName));
+        } else {
+            return ImmutableList.of(getTimer(metricName), getTimer(parameterizedMetricName));
+        }
+    }
+
+    private static Timer getTimer(String metricName) {
+        return registry.timer(metricName, () -> {
             switch (options.getTimerType()) {
                 case DECAYING:
-                    return new Timer(LockFreeExponentiallyDecayingReservoir.builder().build());
+                    return new Timer(LockFreeExponentiallyDecayingReservoir.builder()
+                            .build());
                 case SLIDING:
                 default:
                     // The correct behaviour is to throw an IllegalStateException here. However, it is not advisable to
                     // fail actual method calls, so it is better to use the default timer type
                     return new Timer(new SlidingTimeWindowArrayReservoir(60, TimeUnit.SECONDS));
             }
-        }));
+        });
     }
 
     public static Options getOptions() {

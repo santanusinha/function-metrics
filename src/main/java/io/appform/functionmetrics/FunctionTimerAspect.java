@@ -16,10 +16,24 @@
 
 package io.appform.functionmetrics;
 
+import static io.appform.functionmetrics.FunctionMetricConstants.METRIC_DELIMITER;
+import static io.appform.functionmetrics.FunctionMetricConstants.VALID_PARAM_VALUE_PATTERN;
+import static io.appform.functionmetrics.FunctionMetricsManager.timers;
+
 import com.codahale.metrics.Timer;
 import com.google.common.base.Joiner;
 import com.google.common.base.Stopwatch;
 import com.google.common.base.Strings;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.Signature;
 import org.aspectj.lang.annotation.Around;
@@ -29,22 +43,13 @@ import org.aspectj.lang.reflect.MethodSignature;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.TimeUnit;
-import java.util.stream.Collectors;
-import java.util.stream.IntStream;
-
-import static io.appform.functionmetrics.FunctionMetricConstants.METRIC_DELIMITER;
-import static io.appform.functionmetrics.FunctionMetricConstants.VALID_PARAM_VALUE_PATTERN;
-import static io.appform.functionmetrics.FunctionMetricsManager.timer;
-
 /**
  * This aspect ensures that only methods annotated with {@link MonitoredFunction} are measured.
  */
 @Aspect
 @SuppressWarnings("unused")
 public class FunctionTimerAspect {
+
     private static final Logger log = LoggerFactory.getLogger(FunctionTimerAspect.class.getName());
 
     private final Map<String, MethodData> paramCache = new ConcurrentHashMap<>();
@@ -69,65 +74,74 @@ public class FunctionTimerAspect {
         try {
             final Object response = joinPoint.proceed();
             stopwatch.stop();
-            timer(TimerDomain.SUCCESS, invocation).ifPresent(timer -> updateTimer(timer, stopwatch));
+            List<Timer> timers = timers(TimerDomain.SUCCESS, invocation);
+            timers.forEach(timer -> updateTimer(timer, stopwatch));
             return response;
-        }
-        catch (Throwable t) {
+        } catch (Throwable t) {
             stopwatch.stop();
-            timer(TimerDomain.FAILURE, invocation).ifPresent(timer -> updateTimer(timer, stopwatch));
+            List<Timer> timers = timers(TimerDomain.FAILURE, invocation);
+            timers.forEach(timer -> updateTimer(timer, stopwatch));
             throw t;
-        }
-        finally {
-            timer(TimerDomain.ALL, invocation).ifPresent(timer -> updateTimer(timer, stopwatch));
+        } finally {
+            List<Timer> timers = timers(TimerDomain.ALL, invocation);
+            timers.forEach(timer -> updateTimer(timer, stopwatch));
         }
     }
 
     private boolean cacheDisabled() {
-        return FunctionMetricsManager.getOptions().isDisableCacheOptimisation();
+        return FunctionMetricsManager.getOptions()
+                .isDisableCacheOptimisation();
     }
 
     private boolean parameterCaptureEnabled() {
-        return FunctionMetricsManager.getOptions().isEnableParameterCapture();
+        return FunctionMetricsManager.getOptions()
+                .isEnableParameterCapture();
     }
 
-    private MethodData getMethodData(final ProceedingJoinPoint joinPoint, final Signature callSignature) {
+    private MethodData getMethodData(final ProceedingJoinPoint joinPoint,
+                                     final Signature callSignature) {
         return cacheDisabled()
-                ? createMethodData(joinPoint, callSignature)
-                : paramCache.computeIfAbsent(callSignature.toLongString(), key -> createMethodData(joinPoint, callSignature));
+               ? createMethodData(joinPoint, callSignature)
+               : paramCache.computeIfAbsent(callSignature.toLongString(),
+                       key -> createMethodData(joinPoint, callSignature));
     }
 
-    private MethodData createMethodData(final ProceedingJoinPoint joinPoint, final Signature callSignature) {
+    private MethodData createMethodData(final ProceedingJoinPoint joinPoint,
+                                        final Signature callSignature) {
         final MethodSignature methodSignature = (MethodSignature) callSignature;
-        final MonitoredFunction monitoredFunction = methodSignature.getMethod().getAnnotation(MonitoredFunction.class);
+        final MonitoredFunction monitoredFunction = methodSignature.getMethod()
+                .getAnnotation(MonitoredFunction.class);
         final String className = Strings.isNullOrEmpty(monitoredFunction.className())
-                                 ? callSignature.getDeclaringType().getSimpleName()
+                                 ? callSignature.getDeclaringType()
+                                         .getSimpleName()
                                  : monitoredFunction.className();
         final String methodName = Strings.isNullOrEmpty(monitoredFunction.method())
                                   ? callSignature.getName()
                                   : monitoredFunction.method();
         final boolean isParameterCaptureEnabled = parameterCaptureEnabled();
         return new MethodData(className, methodName, isParameterCaptureEnabled
-                ? getAnnotatedParamPositions(methodSignature)
-                : Collections.emptyList());
+                                                     ? getAnnotatedParamPositions(methodSignature)
+                                                     : Collections.emptyList());
     }
 
-    private FunctionInvocation createFunctionInvocation(
-            final MethodData methodData,
-            final ProceedingJoinPoint joinPoint,
-            final Signature callSignature) {
+    private FunctionInvocation createFunctionInvocation(final MethodData methodData,
+                                                        final ProceedingJoinPoint joinPoint,
+                                                        final Signature callSignature) {
         final MethodSignature methodSignature = (MethodSignature) callSignature;
         final Options options = FunctionMetricsManager.getOptions();
         final String className = methodData.getClassName();
         final String methodName = methodData.getMethodName();
-        final String parameterString = !methodData.getParameterPositions().isEmpty()
-                ? getParamString(joinPoint, methodData.getParameterPositions()).orElse("")
-                : "";
+        final String parameterString = !methodData.getParameterPositions()
+                .isEmpty()
+                                       ? getParamString(joinPoint, methodData.getParameterPositions()).orElse("")
+                                       : "";
         log.trace("Called for class: {} method: {} parameterString: {}", className, methodName, parameterString);
         return new FunctionInvocation(className, methodName, parameterString);
     }
 
     private boolean isParamCaptureRequired(final MethodSignature methodSignature) {
-        return IntStream.range(0, methodSignature.getMethod().getParameterCount())
+        return IntStream.range(0, methodSignature.getMethod()
+                        .getParameterCount())
                 .anyMatch(i -> methodSignature.getMethod()
                         .getParameters()[i].getAnnotation(MetricTerm.class) != null);
     }
@@ -139,18 +153,20 @@ public class FunctionTimerAspect {
             return "";
         }
         final String paramValueStr = convertToString(joinPoint.getArgs()[pos]).trim();
-        return VALID_PARAM_VALUE_PATTERN.matcher(paramValueStr).matches()
-                ? FunctionMetricsManager.getOptions()
-                            .getCaseFormatConverter()
-                            .convert(paramValueStr)
-                : "";
+        return VALID_PARAM_VALUE_PATTERN.matcher(paramValueStr)
+                       .matches()
+               ? FunctionMetricsManager.getOptions()
+                       .getCaseFormatConverter()
+                       .convert(paramValueStr)
+               : "";
     }
 
     private List<Integer> getAnnotatedParamPositions(final MethodSignature methodSignature) {
-        return IntStream.range(0, methodSignature.getMethod().getParameterCount())
+        return IntStream.range(0, methodSignature.getMethod()
+                        .getParameterCount())
                 .mapToObj(i -> {
-                    final MetricTerm metricTerm = methodSignature.getMethod().getParameters()[i]
-                            .getAnnotation(MetricTerm.class);
+                    final MetricTerm metricTerm = methodSignature.getMethod()
+                            .getParameters()[i].getAnnotation(MetricTerm.class);
                     if (metricTerm == null) {
                         return null;
                     }
@@ -167,32 +183,30 @@ public class FunctionTimerAspect {
         if (!parameterCaptureEnabled()) {
             return Optional.empty();
         }
-        List<String> paramValues = paramPositions
-                .stream()
+        List<String> paramValues = paramPositions.stream()
                 .map(pos -> getParamValueAtPos(joinPoint, pos)) // extract parameter value
                 .collect(Collectors.toList());
         // if and only if after all transformations none of the parameter values are null or
         // empty will we add the parameter string to the metric name
-        if (paramValues
-                .stream()
+        if (paramValues.stream()
                 .noneMatch(Strings::isNullOrEmpty)) {
-            return Optional.of(Joiner.on(METRIC_DELIMITER).join(paramValues));
+            return Optional.of(Joiner.on(METRIC_DELIMITER)
+                    .join(paramValues));
         }
         return Optional.empty();
     }
 
-    private void updateTimer(Timer timer, Stopwatch stopwatch) {
+    private void updateTimer(Timer timer,
+                             Stopwatch stopwatch) {
         timer.update(stopwatch.elapsed(TimeUnit.MILLISECONDS), TimeUnit.MILLISECONDS);
     }
 
     private String convertToString(Object obj) {
         if (obj == null) {
             return "";
-        }
-        else if (obj instanceof String) {
+        } else if (obj instanceof String) {
             return (String) obj;
-        }
-        else if (obj instanceof Enum) {
+        } else if (obj instanceof Enum) {
             return ((Enum<?>) obj).name();
         }
         return "";
