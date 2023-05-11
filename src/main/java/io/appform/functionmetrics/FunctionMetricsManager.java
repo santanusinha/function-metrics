@@ -72,7 +72,7 @@ public class FunctionMetricsManager {
         initialized.set(true);
     }
 
-    public static List<Timer> timers(final TimerDomain domain,
+    public static ImmutableList<Timer> timers(final TimerDomain domain,
                                      final FunctionInvocation invocation) {
         if (!initialized.get()) {
             log.warn(
