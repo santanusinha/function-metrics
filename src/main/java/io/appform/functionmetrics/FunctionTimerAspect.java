@@ -76,12 +76,14 @@ public class FunctionTimerAspect {
             List<Timer> timers = timers(TimerDomain.SUCCESS, invocation);
             timers.forEach(timer -> updateTimer(timer, stopwatch));
             return response;
-        } catch (Throwable t) {
+        }
+        catch (Throwable t) {
             stopwatch.stop();
             List<Timer> timers = timers(TimerDomain.FAILURE, invocation);
             timers.forEach(timer -> updateTimer(timer, stopwatch));
             throw t;
-        } finally {
+        }
+        finally {
             List<Timer> timers = timers(TimerDomain.ALL, invocation);
             timers.forEach(timer -> updateTimer(timer, stopwatch));
         }
@@ -97,8 +99,8 @@ public class FunctionTimerAspect {
 
     private MethodData getMethodData(final ProceedingJoinPoint joinPoint, final Signature callSignature) {
         return cacheDisabled()
-               ? createMethodData(joinPoint, callSignature)
-               : paramCache.computeIfAbsent(callSignature.toLongString(), key -> createMethodData(joinPoint, callSignature));
+                ? createMethodData(joinPoint, callSignature)
+                : paramCache.computeIfAbsent(callSignature.toLongString(), key -> createMethodData(joinPoint, callSignature));
     }
 
     private MethodData createMethodData(final ProceedingJoinPoint joinPoint, final Signature callSignature) {
@@ -145,10 +147,10 @@ public class FunctionTimerAspect {
         }
         final String paramValueStr = convertToString(joinPoint.getArgs()[pos]).trim();
         return VALID_PARAM_VALUE_PATTERN.matcher(paramValueStr).matches()
-               ? FunctionMetricsManager.getOptions()
+                ? FunctionMetricsManager.getOptions()
                        .getCaseFormatConverter()
                        .convert(paramValueStr)
-               : "";
+                : "";
     }
 
     private List<Integer> getAnnotatedParamPositions(final MethodSignature methodSignature) {
@@ -181,8 +183,7 @@ public class FunctionTimerAspect {
         if (paramValues
                 .stream()
                 .noneMatch(Strings::isNullOrEmpty)) {
-            return Optional.of(Joiner.on(METRIC_DELIMITER)
-                    .join(paramValues));
+            return Optional.of(Joiner.on(METRIC_DELIMITER).join(paramValues));
         }
         return Optional.empty();
     }
