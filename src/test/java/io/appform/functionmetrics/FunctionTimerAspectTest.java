@@ -41,8 +41,11 @@ public class FunctionTimerAspectTest {
 
     @BeforeClass
     public static void setup() {
-        FunctionMetricsManager.initialize("phonepe.test", registry,
-                new Options.OptionsBuilder().enableParameterCapture(true)
+        FunctionMetricsManager.initialize(
+                "phonepe.test",
+                registry,
+                new Options.OptionsBuilder()
+                        .enableParameterCapture(true)
                         .caseFormatConverter(CaseFormat.LOWER_UNDERSCORE.converterTo(CaseFormat.LOWER_CAMEL))
                         .timerReservoirType(TimerReservoirType.DECAYING)
                         .build());

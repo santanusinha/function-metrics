@@ -34,18 +34,15 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * Global metrics manager that needs to be initialized at start
  */
 public class FunctionMetricsManager {
-
     private static final Logger log = LoggerFactory.getLogger(FunctionMetricsManager.class.getName());
     private static final AtomicBoolean initialized = new AtomicBoolean(false);
     private static Options options = new Options();
     private static MetricRegistry registry;
     private static String prefix;
 
-    private FunctionMetricsManager() {
-    }
+    private FunctionMetricsManager() {}
 
-    public static void initialize(final String packageName,
-                                  final MetricRegistry registry) {
+    public static void initialize(final String packageName, final MetricRegistry registry) {
         initialize(packageName, registry, options);
     }
 
@@ -75,16 +72,12 @@ public class FunctionMetricsManager {
     public static List<Timer> timers(final TimerDomain domain,
                                      final FunctionInvocation invocation) {
         if (!initialized.get()) {
-            log.warn(
-                    "Please call FunctionMetricsManager.initialize() to setup metrics collection. No metrics will be pushed.");
+            log.warn("Please call FunctionMetricsManager.initialize() to setup metrics collection. No metrics will be pushed.");
             return new ArrayList<>();
         }
-        final String metricName =
-                prefix + "." + invocation.getClassName() + "." + invocation.getMethodName() + "." + domain.getValue();
-        final String parameterizedMetricName =
-                options.isEnableParameterCapture() && !Strings.isNullOrEmpty(invocation.getParameterString())
-                ? prefix + "." + invocation.getClassName() + "." + invocation.getMethodName() + "."
-                        + invocation.getParameterString() + "." + domain.getValue()
+        final String metricName = prefix + "." + invocation.getClassName() + "." + invocation.getMethodName() + "." + domain.getValue();
+        final String parameterizedMetricName = options.isEnableParameterCapture() && !Strings.isNullOrEmpty(invocation.getParameterString())
+                ? prefix + "." + invocation.getClassName() + "." + invocation.getMethodName() + "." + invocation.getParameterString() + "." + domain.getValue()
                 : null;
         if (Strings.isNullOrEmpty(parameterizedMetricName)) {
             return ImmutableList.of(getTimer(metricName));
@@ -97,8 +90,7 @@ public class FunctionMetricsManager {
         return registry.timer(metricName, () -> {
             switch (options.getTimerType()) {
                 case DECAYING:
-                    return new Timer(LockFreeExponentiallyDecayingReservoir.builder()
-                            .build());
+                    return new Timer(LockFreeExponentiallyDecayingReservoir.builder().build());
                 case SLIDING:
                 default:
                     // The correct behaviour is to throw an IllegalStateException here. However, it is not advisable to
