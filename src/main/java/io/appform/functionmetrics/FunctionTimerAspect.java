@@ -127,8 +127,8 @@ public class FunctionTimerAspect {
         final String className = methodData.getClassName();
         final String methodName = methodData.getMethodName();
         final String parameterString = !methodData.getParameterPositions().isEmpty()
-                                       ? getParamString(joinPoint, methodData.getParameterPositions()).orElse("")
-                                       : "";
+                ? getParamString(joinPoint, methodData.getParameterPositions()).orElse("")
+                : "";
         log.trace("Called for class: {} method: {} parameterString: {}", className, methodName, parameterString);
         return new FunctionInvocation(className, methodName, parameterString);
     }
@@ -148,8 +148,8 @@ public class FunctionTimerAspect {
         final String paramValueStr = convertToString(joinPoint.getArgs()[pos]).trim();
         return VALID_PARAM_VALUE_PATTERN.matcher(paramValueStr).matches()
                 ? FunctionMetricsManager.getOptions()
-                       .getCaseFormatConverter()
-                       .convert(paramValueStr)
+                            .getCaseFormatConverter()
+                            .convert(paramValueStr)
                 : "";
     }
 
