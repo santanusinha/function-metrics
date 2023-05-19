@@ -21,10 +21,12 @@ import com.codahale.metrics.MetricRegistry;
 import com.codahale.metrics.SlidingTimeWindowArrayReservoir;
 import com.codahale.metrics.Timer;
 import com.google.common.base.Strings;
+import com.google.common.collect.ImmutableList;
+import java.util.ArrayList;
+import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -67,15 +69,24 @@ public class FunctionMetricsManager {
         initialized.set(true);
     }
 
-    public static Optional<Timer> timer(final TimerDomain domain, final FunctionInvocation invocation) {
+    public static ImmutableList<Timer> timers(final TimerDomain domain, final FunctionInvocation invocation) {
         if(!initialized.get()) {
             log.warn("Please call FunctionMetricsManager.initialize() to setup metrics collection. No metrics will be pushed.");
-            return Optional.empty();
+            return ImmutableList.<Timer>builder().build();
         }
-        final String metricName = options.isEnableParameterCapture() && !Strings.isNullOrEmpty(invocation.getParameterString())
-                ? prefix + "." + invocation.getClassName() + "." + invocation.getMethodName() + "." + invocation.getParameterString() + "." + domain.getValue()
-                : prefix + "." + invocation.getClassName() + "." + invocation.getMethodName() + "." + domain.getValue();
-        return Optional.of(registry.timer(metricName, () -> {
+        final String metricName = prefix + "." + invocation.getClassName() + "." + invocation.getMethodName() + "." + domain.getValue();
+        final String parameterizedMetricName = options.isEnableParameterCapture() && !Strings.isNullOrEmpty(invocation.getParameterString())
+                                               ? prefix + "." + invocation.getClassName() + "." + invocation.getMethodName() + "." + invocation.getParameterString() + "." + domain.getValue()
+                                               : null;
+        if (Strings.isNullOrEmpty(parameterizedMetricName)) {
+            return ImmutableList.of(getTimer(metricName));
+        } else {
+            return ImmutableList.of(getTimer(metricName), getTimer(parameterizedMetricName));
+        }
+    }
+
+    private static Timer getTimer(String metricName) {
+        return registry.timer(metricName, () -> {
             switch (options.getTimerType()) {
                 case DECAYING:
                     return new Timer(LockFreeExponentiallyDecayingReservoir.builder().build());
@@ -85,7 +96,7 @@ public class FunctionMetricsManager {
                     // fail actual method calls, so it is better to use the default timer type
                     return new Timer(new SlidingTimeWindowArrayReservoir(60, TimeUnit.SECONDS));
             }
-        }));
+        });
     }
 
     public static Options getOptions() {
