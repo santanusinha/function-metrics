@@ -99,8 +99,8 @@ public class FunctionTimerAspect {
 
     private MethodData getMethodData(final ProceedingJoinPoint joinPoint, final Signature callSignature) {
         return cacheDisabled()
-               ? createMethodData(joinPoint, callSignature)
-               : paramCache.computeIfAbsent(callSignature.toLongString(), key -> createMethodData(joinPoint, callSignature));
+                ? createMethodData(joinPoint, callSignature)
+                : paramCache.computeIfAbsent(callSignature.toLongString(), key -> createMethodData(joinPoint, callSignature));
     }
 
     private MethodData createMethodData(final ProceedingJoinPoint joinPoint, final Signature callSignature) {
@@ -114,8 +114,8 @@ public class FunctionTimerAspect {
                                   : monitoredFunction.method();
         final boolean isParameterCaptureEnabled = parameterCaptureEnabled();
         return new MethodData(className, methodName, isParameterCaptureEnabled
-                                                     ? getAnnotatedParamPositions(methodSignature)
-                                                     : Collections.emptyList());
+                ? getAnnotatedParamPositions(methodSignature)
+                : Collections.emptyList());
     }
 
     private FunctionInvocation createFunctionInvocation(
@@ -127,8 +127,8 @@ public class FunctionTimerAspect {
         final String className = methodData.getClassName();
         final String methodName = methodData.getMethodName();
         final String parameterString = !methodData.getParameterPositions().isEmpty()
-                                       ? getParamString(joinPoint, methodData.getParameterPositions()).orElse("")
-                                       : "";
+                ? getParamString(joinPoint, methodData.getParameterPositions()).orElse("")
+                : "";
         log.trace("Called for class: {} method: {} parameterString: {}", className, methodName, parameterString);
         return new FunctionInvocation(className, methodName, parameterString);
     }
@@ -147,10 +147,10 @@ public class FunctionTimerAspect {
         }
         final String paramValueStr = convertToString(joinPoint.getArgs()[pos]).trim();
         return VALID_PARAM_VALUE_PATTERN.matcher(paramValueStr).matches()
-               ? FunctionMetricsManager.getOptions()
-                       .getCaseFormatConverter()
-                       .convert(paramValueStr)
-               : "";
+                ? FunctionMetricsManager.getOptions()
+                            .getCaseFormatConverter()
+                            .convert(paramValueStr)
+                : "";
     }
 
     private List<Integer> getAnnotatedParamPositions(final MethodSignature methodSignature) {
